@@ -17,6 +17,7 @@
 
 #include "RaceMgr.h"
 #include "AccountMgr.h"
+#include "StringConvert.h"
 #include "DatabaseEnv.h"
 #include "ObjectMgr.h"
 #include "Player.h"
@@ -77,15 +78,23 @@ void RaceMgr::LoadRaces()
     }
 }
 
-Optional<RaceMask> RaceMgr::ReadRaceMask(Field const& field, std::string_view table, std::string_view column)
+RaceMask RaceMgr::ReadRaceMask(Field const* fields, uint32 lowIndex, uint32 highIndex)
 {
-    std::string_view value = field.Get<std::string_view>();
-    Optional<RaceMask> raceMask = RaceMask::FromString(value);
-    if (!raceMask)
-        LOG_ERROR("sql.sql", "Table `{}` has malformed race mask '{}' in `{}`, expected decimal, -1 or 0x-prefixed hex.",
-            table, value, column);
+    // signed columns (item_template.AllowableRace) hold -1, read as all 64 bits set
+    auto readWord = [](Field const& field) -> uint64
+    {
+        std::string_view value = field.Get<std::string_view>();
+        if (Optional<uint64> word = Acore::StringTo<uint64>(value))
+            return *word;
+        return uint64(Acore::StringTo<int64>(value).value_or(0));
+    };
 
-    return raceMask;
+    std::array<uint64, RaceMask::WORD64_COUNT> words;
+    words[0] = readWord(fields[lowIndex]);
+    for (uint32 i = 1; i < RaceMask::WORD64_COUNT; ++i)
+        words[i] = readWord(fields[highIndex + i - 1]);
+
+    return RaceMask::FromWords64(words);
 }
 
 RaceMask RaceMgr::GetCreationDisabledRaceMask()

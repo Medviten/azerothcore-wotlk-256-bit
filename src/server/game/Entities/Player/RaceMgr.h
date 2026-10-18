@@ -43,8 +43,12 @@ public:
     static RaceMask const& GetAllianceRaceMask() { return _allianceRaceMask; }
     static RaceMask const& GetHordeRaceMask() { return _hordeRaceMask; }
 
-    /// Reads a race mask column (see RaceMask::FromString). Logs and returns no value if it is malformed.
-    static Optional<RaceMask> ReadRaceMask(Field const& field, std::string_view table, std::string_view column);
+    /**
+     * @brief Reads a race mask stored as four BIGINT columns (see RaceMask::FromWords64()).
+     * @param lowIndex Column of races 1-64: the original race mask column, so SQL bitwise math on it keeps working.
+     * @param highIndex First of the three consecutive columns of races 65-128, 129-192 and 193-256.
+     */
+    static RaceMask ReadRaceMask(Field const* fields, uint32 lowIndex, uint32 highIndex);
 
     /// Races players cannot create or change to, from CharacterCreating.Disabled.RaceMask.
     static RaceMask GetCreationDisabledRaceMask();

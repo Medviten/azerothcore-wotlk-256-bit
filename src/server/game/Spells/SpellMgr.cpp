@@ -2818,7 +2818,7 @@ void SpellMgr::LoadSpellAreas()
     mSpellAreaForAuraMap.clear();
 
     //                                                  0     1         2              3               4                 5          6          7       8         9
-    QueryResult result = WorldDatabase.Query("SELECT spell, area, quest_start, quest_start_status, quest_end_status, quest_end, aura_spell, racemask, gender, autocast FROM spell_area");
+    QueryResult result = WorldDatabase.Query("SELECT spell, area, quest_start, quest_start_status, quest_end_status, quest_end, aura_spell, racemask, gender, autocast, racemask_2, racemask_3, racemask_4 FROM spell_area");
 
     if (!result)
     {
@@ -2841,10 +2841,7 @@ void SpellMgr::LoadSpellAreas()
         spellArea.questEndStatus      = fields[4].Get<uint32>();
         spellArea.questEnd            = fields[5].Get<uint32>();
         spellArea.auraSpell           = fields[6].Get<int32>();
-        if (Optional<RaceMask> raceMask = sRaceMgr->ReadRaceMask(fields[7], "spell_area", "racemask"))
-            spellArea.raceMask        = *raceMask;
-        else
-            continue;
+        spellArea.raceMask            = sRaceMgr->ReadRaceMask(fields, 7, 10);
         spellArea.gender              = Gender(fields[8].Get<uint8>());
         spellArea.autocast            = fields[9].Get<bool>();
 

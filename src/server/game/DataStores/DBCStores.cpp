@@ -909,7 +909,7 @@ SkillRaceClassInfoEntry const* GetSkillRaceClassInfo(uint32 skill, uint8 race, u
     SkillRaceClassInfoBounds bounds = SkillRaceClassInfoBySkill.equal_range(skill);
     for (SkillRaceClassInfoMap::iterator itr = bounds.first; itr != bounds.second; ++itr)
     {
-        if (itr->second->RaceMask && !RaceMask::FromLegacy(itr->second->RaceMask).HasRace(race))
+        if (itr->second->RaceMask && !itr->second->RaceMask.HasRace(race))
         {
             continue;
         }

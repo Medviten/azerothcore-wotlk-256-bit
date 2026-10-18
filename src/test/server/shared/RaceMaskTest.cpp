@@ -61,6 +61,22 @@ TEST(RaceMaskTest, FromChunks32)
     EXPECT_EQ(mask, RaceMask::FromRace(1) | RaceMask::FromRace(33) | RaceMask::FromRace(96));
 }
 
+TEST(RaceMaskTest, Words64MatchDatabaseColumns)
+{
+    // word 0 = races 1-64 (the original column), words 1-3 = races 65-256
+    RaceMask mask = RaceMask::FromWords64({ (uint64(1) << 63) | 1101, 1, 0, uint64(1) << 62 });
+    EXPECT_TRUE(mask.HasRace(64));
+    EXPECT_TRUE(mask.HasRace(65));
+    EXPECT_TRUE(mask.HasRace(255));
+    EXPECT_FALSE(mask.HasRace(66));
+    EXPECT_EQ(mask.ToLegacy(), 1101u);
+    EXPECT_EQ(mask.GetWord64(0), (uint64(1) << 63) | 1101);
+    EXPECT_EQ(mask.GetWord64(1), 1u);
+    EXPECT_EQ(mask.GetWord64(3), uint64(1) << 62);
+    EXPECT_EQ(mask.GetWord64(4), 0u);
+    EXPECT_EQ(RaceMask::FromWords64({ mask.GetWord64(0), mask.GetWord64(1), mask.GetWord64(2), mask.GetWord64(3) }), mask);
+}
+
 TEST(RaceMaskTest, FromStringAcceptsDatabaseFormats)
 {
     EXPECT_EQ(RaceMask::FromString(""), RaceMask());

@@ -27,8 +27,8 @@
 #include "QuestDef.h"
 #include "RaceMgr.h"
 #include "SharedDefines.h"
-#include "StringConvert.h"
 #include "Timer.h"
+#include <limits>
 
 ServerMailMgr* ServerMailMgr::instance()
 {
@@ -164,7 +164,7 @@ void ServerMailMgr::LoadMailServerTemplatesItems()
 void ServerMailMgr::LoadMailServerTemplatesConditions()
 {
     //                                                    0             1                2                 3
-    QueryResult result = CharacterDatabase.Query("SELECT `templateID`, `conditionType`, `conditionValue`, `conditionState` FROM `mail_server_template_conditions`");
+    QueryResult result = CharacterDatabase.Query("SELECT `templateID`, `conditionType`, `conditionValue`, `conditionState`, `conditionValue_2`, `conditionValue_3`, `conditionValue_4` FROM `mail_server_template_conditions`");
     if (!result)
     {
         LOG_WARN("server.loading", ">> Loaded 0 server mail conditions. DB table `mail_server_template_conditions` is empty.");
@@ -177,7 +177,7 @@ void ServerMailMgr::LoadMailServerTemplatesConditions()
 
         uint32 templateID                 = fields[0].Get<uint32>();
         std::string_view conditionTypeStr = fields[1].Get<std::string_view>();
-        std::string_view conditionValueStr = fields[2].Get<std::string_view>();
+        uint64 conditionValueRaw          = fields[2].Get<uint64>();
         uint32 conditionState             = fields[3].Get<uint32>();
 
         if (_serverMailStore.find(templateID) == _serverMailStore.end())
@@ -198,22 +198,16 @@ void ServerMailMgr::LoadMailServerTemplatesConditions()
         if (conditionState && !ConditionTypeUsesConditionState(conditionType))
             LOG_WARN("sql.sql", "Table `mail_server_template_conditions` has conditionState value ({}) for conditionType ({}) which does not use conditionState.", conditionState, conditionTypeStr);
 
-        // race conditions hold a race mask string, all others a plain number
+        // race conditions hold a race mask in conditionValue and conditionValue_2-4, all others a 32-bit number
         uint32 conditionValue = 0;
         RaceMask conditionRaceMask;
         if (conditionType == ServerMailConditionType::Race)
-        {
-            Optional<RaceMask> raceMask = sRaceMgr->ReadRaceMask(fields[2], "mail_server_template_conditions", "conditionValue");
-            if (!raceMask)
-                continue;
-
-            conditionRaceMask = *raceMask;
-        }
-        else if (Optional<uint32> value = Acore::StringTo<uint32>(conditionValueStr))
-            conditionValue = *value;
+            conditionRaceMask = sRaceMgr->ReadRaceMask(fields, 2, 4);
+        else if (conditionValueRaw <= std::numeric_limits<uint32>::max())
+            conditionValue = uint32(conditionValueRaw);
         else
         {
-            LOG_ERROR("sql.sql", "Table `mail_server_template_conditions` has non-numeric conditionValue '{}' for conditionType '{}', templateID {}, skipped.", conditionValueStr, conditionTypeStr, templateID);
+            LOG_ERROR("sql.sql", "Table `mail_server_template_conditions` has out of range conditionValue {} for conditionType '{}', templateID {}, skipped.", conditionValueRaw, conditionTypeStr, templateID);
             continue;
         }
 

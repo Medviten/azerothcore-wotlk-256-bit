@@ -29,29 +29,31 @@
 /**
  * @brief 256-bit race mask. Bit (race - 1) is set for each race, so race ids 1-255 fit.
  *
- * The 3.3.5a client and DBC files only know 32-bit masks: convert with FromLegacy() / ToLegacy() at those
- * boundaries. In the database masks are stored as strings, see FromString().
+ * Laid out like the widened DBC files (Faction, SkillLineAbility, SkillRaceClassInfo, TalentTab): 8 uint32 fields,
+ * races 1-32 first, so DBC structs hold it directly. In the database a mask is four BIGINT columns of 64 bits each
+ * (see FromWords64()). The 3.3.5a item query packet still carries 32 bits: see ToLegacy().
  */
 class RaceMask
 {
 public:
-    static constexpr uint32 WORD_COUNT = 4;
-    static constexpr uint32 BIT_COUNT = WORD_COUNT * 64;
+    static constexpr uint32 FIELD_COUNT = 8;
+    static constexpr uint32 WORD64_COUNT = FIELD_COUNT / 2;
+    static constexpr uint32 BIT_COUNT = FIELD_COUNT * 32;
 
-    constexpr RaceMask() : _words{} { }
+    constexpr RaceMask() : _fields{} { }
 
     [[nodiscard]] static constexpr RaceMask FromRace(uint32 race)
     {
         RaceMask mask;
         if (race && race <= BIT_COUNT)
-            mask._words[(race - 1) / 64] = uint64(1) << ((race - 1) % 64);
+            mask._fields[(race - 1) / 32] = uint32(1) << ((race - 1) % 32);
         return mask;
     }
 
     [[nodiscard]] static constexpr RaceMask FromLegacy(uint32 legacyMask)
     {
         RaceMask mask;
-        mask._words[0] = legacyMask;
+        mask._fields[0] = legacyMask;
         return mask;
     }
 
@@ -62,11 +64,22 @@ public:
         uint32 index = 0;
         for (uint32 chunk : chunks)
         {
-            if (index >= WORD_COUNT * 2)
+            if (index >= FIELD_COUNT)
                 break;
 
-            mask._words[index / 2] |= uint64(chunk) << ((index % 2) * 32);
-            ++index;
+            mask._fields[index++] = chunk;
+        }
+        return mask;
+    }
+
+    /// Builds a mask from the four 64-bit database words, lowest first: word i holds races 64 * i + 1 to 64 * i + 64.
+    [[nodiscard]] static constexpr RaceMask FromWords64(std::array<uint64, WORD64_COUNT> const& words)
+    {
+        RaceMask mask;
+        for (uint32 i = 0; i < WORD64_COUNT; ++i)
+        {
+            mask._fields[i * 2] = uint32(words[i]);
+            mask._fields[i * 2 + 1] = uint32(words[i] >> 32);
         }
         return mask;
     }
@@ -77,7 +90,7 @@ public:
     }
 
     /**
-     * @brief Parses a database or config value: "" or "0" (empty), "-1" (all races), "0x..." (hex) or decimal.
+     * @brief Parses a config value: "" or "0" (empty), "-1" (all races), "0x..." (hex) or decimal.
      * @return The mask, or no value if the string is malformed or does not fit in 256 bits.
      */
     [[nodiscard]] static Optional<RaceMask> FromString(std::string_view str)
@@ -106,7 +119,7 @@ public:
             for (std::size_t i = 0; i < str.size(); ++i)
             {
                 char c = str[str.size() - 1 - i];
-                uint64 digit;
+                uint32 digit;
                 if (c >= '0' && c <= '9')
                     digit = c - '0';
                 else if (c >= 'a' && c <= 'f')
@@ -116,7 +129,7 @@ public:
                 else
                     return {};
 
-                mask._words[i / 16] |= digit << ((i % 16) * 4);
+                mask._fields[i / 8] |= digit << ((i % 8) * 4);
             }
 
             return mask;
@@ -127,15 +140,13 @@ public:
             if (c < '0' || c > '9')
                 return {};
 
-            // mask = mask * 10 + digit, word by word with carry
+            // mask = mask * 10 + digit, field by field with carry
             uint64 carry = uint64(c - '0');
-            for (uint64& word : mask._words)
+            for (uint32& field : mask._fields)
             {
-                // split the 64-bit word in two 32-bit halves so the multiplication cannot overflow
-                uint64 low = (word & 0xFFFFFFFF) * 10 + carry;
-                uint64 high = (word >> 32) * 10 + (low >> 32);
-                word = (high << 32) | (low & 0xFFFFFFFF);
-                carry = high >> 32;
+                uint64 value = uint64(field) * 10 + carry;
+                field = uint32(value);
+                carry = value >> 32;
             }
 
             if (carry)
@@ -147,23 +158,27 @@ public:
 
     [[nodiscard]] constexpr bool HasRace(uint32 race) const
     {
-        return !(*this & FromRace(race)).IsEmpty();
+        return race && race <= BIT_COUNT && (_fields[(race - 1) / 32] >> ((race - 1) % 32)) & 1;
     }
 
     [[nodiscard]] constexpr bool IsEmpty() const
     {
-        for (uint64 word : _words)
-            if (word)
+        for (uint32 field : _fields)
+            if (field)
                 return false;
         return true;
     }
 
     [[nodiscard]] constexpr explicit operator bool() const { return !IsEmpty(); }
 
-    [[nodiscard]] constexpr uint64 GetWord(uint32 index) const { return index < WORD_COUNT ? _words[index] : 0; }
+    /// 64-bit database word i (races 64 * i + 1 to 64 * i + 64).
+    [[nodiscard]] constexpr uint64 GetWord64(uint32 index) const
+    {
+        return index < WORD64_COUNT ? uint64(_fields[index * 2 + 1]) << 32 | _fields[index * 2] : 0;
+    }
 
-    /// Lowest 32 bits, the part the 3.3.5a client understands (races 1-32).
-    [[nodiscard]] constexpr uint32 ToLegacy() const { return uint32(_words[0]); }
+    /// Lowest 32 bits, the part the 3.3.5a item query packet carries (races 1-32).
+    [[nodiscard]] constexpr uint32 ToLegacy() const { return _fields[0]; }
 
     /// Shortest "0x..." representation, also accepted by FromString().
     [[nodiscard]] std::string ToHexString() const
@@ -174,7 +189,7 @@ public:
         bool leading = true;
         for (int32 i = BIT_COUNT / 4 - 1; i >= 0; --i)
         {
-            uint32 digit = (_words[i / 16] >> ((i % 16) * 4)) & 0xF;
+            uint32 digit = (_fields[i / 8] >> ((i % 8) * 4)) & 0xF;
             if (leading && !digit && i)
                 continue;
 
@@ -187,30 +202,30 @@ public:
 
     constexpr RaceMask& operator&=(RaceMask const& right)
     {
-        for (uint32 i = 0; i < WORD_COUNT; ++i)
-            _words[i] &= right._words[i];
+        for (uint32 i = 0; i < FIELD_COUNT; ++i)
+            _fields[i] &= right._fields[i];
         return *this;
     }
 
     constexpr RaceMask& operator|=(RaceMask const& right)
     {
-        for (uint32 i = 0; i < WORD_COUNT; ++i)
-            _words[i] |= right._words[i];
+        for (uint32 i = 0; i < FIELD_COUNT; ++i)
+            _fields[i] |= right._fields[i];
         return *this;
     }
 
     constexpr RaceMask& operator^=(RaceMask const& right)
     {
-        for (uint32 i = 0; i < WORD_COUNT; ++i)
-            _words[i] ^= right._words[i];
+        for (uint32 i = 0; i < FIELD_COUNT; ++i)
+            _fields[i] ^= right._fields[i];
         return *this;
     }
 
     [[nodiscard]] constexpr RaceMask operator~() const
     {
         RaceMask mask;
-        for (uint32 i = 0; i < WORD_COUNT; ++i)
-            mask._words[i] = ~_words[i];
+        for (uint32 i = 0; i < FIELD_COUNT; ++i)
+            mask._fields[i] = ~_fields[i];
         return mask;
     }
 
@@ -220,8 +235,8 @@ public:
 
     [[nodiscard]] friend constexpr bool operator==(RaceMask const& left, RaceMask const& right)
     {
-        for (uint32 i = 0; i < WORD_COUNT; ++i)
-            if (left._words[i] != right._words[i])
+        for (uint32 i = 0; i < FIELD_COUNT; ++i)
+            if (left._fields[i] != right._fields[i])
                 return false;
         return true;
     }
@@ -232,8 +247,11 @@ public:
     }
 
 private:
-    std::array<uint64, WORD_COUNT> _words;
+    std::array<uint32, FIELD_COUNT> _fields;
 };
+
+// DBC structs embed RaceMask in place of 8 consecutive uint32 fields
+static_assert(sizeof(RaceMask) == RaceMask::FIELD_COUNT * sizeof(uint32) && alignof(RaceMask) == alignof(uint32));
 
 template<>
 struct fmt::formatter<RaceMask> : fmt::formatter<std::string_view>

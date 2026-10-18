@@ -21,6 +21,7 @@
 #include "AreaDefines.h"
 #include "DBCEnums.h"
 #include "Define.h"
+#include "RaceMask.h"
 #include "Util.h"
 #include <array>
 #include <map>
@@ -943,19 +944,19 @@ struct FactionEntry
 {
     uint32      ID;                                         // 0        m_ID
     int32       reputationListID;                           // 1        m_reputationIndex
-    uint32      BaseRepRaceMask[4];                         // 2-5      m_reputationRaceMask
-    uint32      BaseRepClassMask[4];                        // 6-9      m_reputationClassMask
-    int32       BaseRepValue[4];                            // 10-13    m_reputationBase
-    uint32      ReputationFlags[4];                         // 14-17    m_reputationFlags
-    uint32      team;                                       // 18       m_parentFactionID
-    float       spilloverRateIn;                            // 19       Faction gains incoming rep * spilloverRateIn
-    float       spilloverRateOut;                           // 20       Faction outputs rep * spilloverRateOut as spillover reputation
-    uint32      spilloverMaxRankIn;                         // 21       The highest rank the faction will profit from incoming spillover
-    //uint32    parentFactionCap;                           // 22       It does not seem to be the max standing at which a faction outputs spillover ...so no idea
-    char const*       name[16];                             // 23-38    m_name_lang
-    // 39 string flags
-    //char const*     description[16];                      // 40-55    m_description_lang
-    // 56 string flags
+    RaceMask    BaseRepRaceMask[4];                         // 2-33     m_reputationRaceMask (256-bit, 8 fields each)
+    uint32      BaseRepClassMask[4];                        // 34-37    m_reputationClassMask
+    int32       BaseRepValue[4];                            // 38-41    m_reputationBase
+    uint32      ReputationFlags[4];                         // 42-45    m_reputationFlags
+    uint32      team;                                       // 46       m_parentFactionID
+    float       spilloverRateIn;                            // 47       Faction gains incoming rep * spilloverRateIn
+    float       spilloverRateOut;                           // 48       Faction outputs rep * spilloverRateOut as spillover reputation
+    uint32      spilloverMaxRankIn;                         // 49       The highest rank the faction will profit from incoming spillover
+    //uint32    parentFactionCap;                           // 50       It does not seem to be the max standing at which a faction outputs spillover ...so no idea
+    char const*       name[16];                             // 51-66    m_name_lang
+    // 67 string flags
+    //char const*     description[16];                      // 68-83    m_description_lang
+    // 84 string flags
 
     // helpers
     [[nodiscard]] bool CanHaveReputation() const
@@ -965,7 +966,7 @@ struct FactionEntry
 
     [[nodiscard]] bool CanBeSetAtWar() const
     {
-        return reputationListID >= 0 && BaseRepRaceMask[0] == 1791;
+        return reputationListID >= 0 && BaseRepRaceMask[0] == RaceMask::FromLegacy(1791);
     }
 };
 
@@ -1605,12 +1606,12 @@ struct SkillRaceClassInfoEntry
 {
     //uint32 ID;                                            // 0
     uint32 SkillID;                                         // 1
-    uint32 RaceMask;                                        // 2
-    uint32 ClassMask;                                       // 3
-    uint32 Flags;                                           // 4
-    //uint32 MinLevel;                                      // 5
-    uint32 SkillTierID;                                     // 6
-    //uint32 SkillCostIndex;                                // 7
+    ::RaceMask RaceMask;                                    // 2-9 (256-bit)
+    uint32 ClassMask;                                       // 10
+    uint32 Flags;                                           // 11
+    //uint32 MinLevel;                                      // 12
+    uint32 SkillTierID;                                     // 13
+    //uint32 SkillCostIndex;                                // 14
 };
 
 #define MAX_SKILL_STEP 16
@@ -1635,16 +1636,16 @@ struct SkillLineAbilityEntry
     uint32 ID;                                              // 0
     uint32 SkillLine;                                       // 1
     uint32 Spell;                                           // 2
-    uint32 RaceMask;                                        // 3
-    uint32 ClassMask;                                       // 4
-    //uint32 ExcludeRace;                                   // 5
-    //uint32 ExcludeClass;                                  // 6
-    uint32 MinSkillLineRank;                                // 7
-    uint32 SupercededBySpell;                               // 8
-    uint32 AcquireMethod;                                   // 9
-    uint32 TrivialSkillLineRankHigh;                        // 10
-    uint32 TrivialSkillLineRankLow;                         // 11
-    //uint32 CharacterPoints[2];                            // 12-13
+    ::RaceMask RaceMask;                                    // 3-10 (256-bit)
+    uint32 ClassMask;                                       // 11
+    //uint32 ExcludeRace;                                   // 12
+    //uint32 ExcludeClass;                                  // 13
+    uint32 MinSkillLineRank;                                // 14
+    uint32 SupercededBySpell;                               // 15
+    uint32 AcquireMethod;                                   // 16
+    uint32 TrivialSkillLineRankHigh;                        // 17
+    uint32 TrivialSkillLineRankLow;                         // 18
+    //uint32 CharacterPoints[2];                            // 19-20
 };
 
 struct SkillTiersEntry

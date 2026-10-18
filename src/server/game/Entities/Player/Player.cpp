@@ -12292,7 +12292,7 @@ void Player::learnSkillRewardedSpells(uint32 skill_id, uint32 skill_value)
         }
 
         // Check race if set
-        if (pAbility->RaceMask && !(RaceMask::FromLegacy(pAbility->RaceMask) & raceMask))
+        if (pAbility->RaceMask && !(pAbility->RaceMask & raceMask))
         {
             continue;
         }
@@ -12655,7 +12655,7 @@ bool Player::IsSpellFitByClassAndRace(uint32 spell_id) const
     for (SkillLineAbilityMap::const_iterator _spell_idx = bounds.first; _spell_idx != bounds.second; ++_spell_idx)
     {
         // skip wrong race skills
-        if (_spell_idx->second->RaceMask && !(RaceMask::FromLegacy(_spell_idx->second->RaceMask) & racemask))
+        if (_spell_idx->second->RaceMask && !(_spell_idx->second->RaceMask & racemask))
             continue;
 
         // skip wrong class skills
