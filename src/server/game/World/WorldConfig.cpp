@@ -223,7 +223,7 @@ void WorldConfig::BuildConfigCache()
     SetConfigValue<uint32>(CONFIG_MAX_WHO_LIST_RETURN, "MaxWhoListReturns", 49);
 
     SetConfigValue<uint32>(CONFIG_CHARACTER_CREATING_DISABLED, "CharacterCreating.Disabled", 0);
-    SetConfigValue<uint32>(CONFIG_CHARACTER_CREATING_DISABLED_RACEMASK, "CharacterCreating.Disabled.RaceMask", 0);
+    SetConfigValue<std::string>(CONFIG_CHARACTER_CREATING_DISABLED_RACEMASK, "CharacterCreating.Disabled.RaceMask", "0");
 
     SetConfigValue<uint32>(CONFIG_CHARACTER_CREATING_DISABLED_CLASSMASK, "CharacterCreating.Disabled.ClassMask", 0);
 

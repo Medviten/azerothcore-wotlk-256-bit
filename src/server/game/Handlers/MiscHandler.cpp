@@ -322,8 +322,9 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
         }
 
         // check if race matches racemask
+        // the client mask only covers races 0-31, races above that are only listed when it does not filter by race
         uint32 race = target.GetRace();
-        if (!(racemask & (1 << race)))
+        if (race < 32 ? !(racemask & (1 << race)) : racemask != 0xFFFFFFFF)
         {
             continue;
         }

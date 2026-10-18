@@ -138,7 +138,7 @@ bool Condition::Meets(ConditionSourceInfo& sourceInfo)
     case CONDITION_RACE:
     {
         if (Unit* unit = object->ToUnit())
-            condMeets = unit->getRaceMask() & ConditionValue1;
+            condMeets = bool(unit->getRaceMask() & RaceMask::FromChunks32({ ConditionValue1, ConditionValue2, ConditionValue3 }));
         break;
     }
     case CONDITION_GENDER:
@@ -2206,16 +2206,13 @@ bool ConditionMgr::isConditionTypeValid(Condition* cond)
     }
     case CONDITION_RACE:
     {
-        if (!(cond->ConditionValue1 & sRaceMgr->GetPlayableRaceMask()))
+        // value1-3 hold races 1-32, 33-64 and 65-96
+        RaceMask raceMask = RaceMask::FromChunks32({ cond->ConditionValue1, cond->ConditionValue2, cond->ConditionValue3 });
+        if (!(raceMask & sRaceMgr->GetPlayableRaceMask()))
         {
-            LOG_ERROR("sql.sql", "Race condition has non existing racemask ({}), skipped", cond->ConditionValue1 & ~sRaceMgr->GetPlayableRaceMask());
+            LOG_ERROR("sql.sql", "Race condition has non existing racemask ({}), skipped", raceMask & ~sRaceMgr->GetPlayableRaceMask());
             return false;
         }
-
-        if (cond->ConditionValue2)
-            LOG_ERROR("sql.sql", "Race condition has useless data in value2 ({})!", cond->ConditionValue2);
-        if (cond->ConditionValue3)
-            LOG_ERROR("sql.sql", "Race condition has useless data in value3 ({})!", cond->ConditionValue3);
         break;
     }
     case CONDITION_GENDER:

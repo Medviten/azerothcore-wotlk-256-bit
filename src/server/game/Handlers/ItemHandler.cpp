@@ -427,7 +427,7 @@ void WorldSession::HandleItemQuerySingleOpcode(WorldPacket& recvData)
         queryData << pProto->SellPrice;
         queryData << pProto->InventoryType;
         queryData << pProto->AllowableClass;
-        queryData << pProto->AllowableRace;
+        queryData << pProto->AllowableRace.ToLegacy();               // the client only knows races 1-32
         queryData << pProto->ItemLevel;
         queryData << pProto->RequiredLevel;
         queryData << pProto->RequiredSkill;

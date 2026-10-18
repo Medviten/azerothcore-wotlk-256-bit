@@ -32,6 +32,7 @@
 #define _SERVERMAILMGR_H
 
 #include "Define.h"
+#include "RaceMask.h"
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -90,6 +91,7 @@ struct ServerMailCondition
 
     ServerMailConditionType type = ServerMailConditionType::Invalid;
     uint32 value{ 0 };
+    RaceMask raceMask; ///< value of ServerMailConditionType::Race conditions
     uint32 state{ 0 };
 
     /**

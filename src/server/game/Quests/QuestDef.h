@@ -21,6 +21,7 @@
 #include "DBCEnums.h"
 #include "DatabaseEnv.h"
 #include "Define.h"
+#include "RaceMask.h"
 #include "SharedDefines.h"
 #include "WorldPacket.h"
 #include <string>
@@ -233,7 +234,7 @@ public:
     [[nodiscard]] int32  GetQuestLevel() const { return Level; }
     [[nodiscard]] uint32 GetType() const { return Type; }
     [[nodiscard]] uint32 GetRequiredClasses() const { return RequiredClasses; }
-    [[nodiscard]] uint32 GetAllowableRaces() const { return AllowableRaces; }
+    [[nodiscard]] RaceMask const& GetAllowableRaces() const { return AllowableRaces; }
     [[nodiscard]] uint32 GetRequiredSkill() const { return RequiredSkillId; }
     [[nodiscard]] uint32 GetRequiredSkillValue() const { return RequiredSkillPoints; }
     [[nodiscard]] uint32 GetRepObjectiveFaction() const { return RequiredFactionId1; }
@@ -349,7 +350,7 @@ protected:
     uint32 MinLevel;
     int32  Level;
     uint32 Type;
-    uint32 AllowableRaces;
+    RaceMask AllowableRaces;
     uint32 RequiredFactionId1;
     int32  RequiredFactionValue1;
     uint32 RequiredFactionId2;

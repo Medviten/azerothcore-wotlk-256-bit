@@ -22,13 +22,14 @@
 #include "Player.h"
 #include "Util.h"
 #include "WorldPacket.h"
+#include "World.h"
 #include "WorldSession.h"
 
-uint8  RaceMgr::_maxRaces = 0;
+uint16 RaceMgr::_maxRaces = 0;
 
-uint32 RaceMgr::_playableRaceMask = 0;
-uint32 RaceMgr::_allianceRaceMask = 0;
-uint32 RaceMgr::_hordeRaceMask = 0;
+RaceMask RaceMgr::_playableRaceMask;
+RaceMask RaceMgr::_allianceRaceMask;
+RaceMask RaceMgr::_hordeRaceMask;
 
 RaceMgr::RaceMgr()
 {
@@ -47,9 +48,9 @@ RaceMgr* RaceMgr::instance()
 void RaceMgr::LoadRaces()
 {
     SetMaxRaces(0 + 1);
-    _playableRaceMask = 0;
-    _hordeRaceMask    = 0;
-    _allianceRaceMask = 0;
+    _playableRaceMask = RaceMask();
+    _hordeRaceMask    = RaceMask();
+    _allianceRaceMask = RaceMask();
 
     for (auto const& raceEntry : sChrRacesStore)
     {
@@ -65,7 +66,7 @@ void RaceMgr::LoadRaces()
         if (GetMaxRaces() <= raceId)
             SetMaxRaces(raceId + 1);
 
-        uint32 raceBit = (1 << (raceId - 1));
+        RaceMask raceBit = RaceMask::FromRace(raceId);
 
         _playableRaceMask |= raceBit;
 
@@ -74,4 +75,29 @@ void RaceMgr::LoadRaces()
         else if (alliance == ALLIANCE_ALLIANCE)
             _allianceRaceMask |= raceBit;
     }
+}
+
+Optional<RaceMask> RaceMgr::ReadRaceMask(Field const& field, std::string_view table, std::string_view column)
+{
+    std::string_view value = field.Get<std::string_view>();
+    Optional<RaceMask> raceMask = RaceMask::FromString(value);
+    if (!raceMask)
+        LOG_ERROR("sql.sql", "Table `{}` has malformed race mask '{}' in `{}`, expected decimal, -1 or 0x-prefixed hex.",
+            table, value, column);
+
+    return raceMask;
+}
+
+RaceMask RaceMgr::GetCreationDisabledRaceMask()
+{
+    std::string_view value = sWorld->getStringConfig(CONFIG_CHARACTER_CREATING_DISABLED_RACEMASK);
+    Optional<RaceMask> raceMask = RaceMask::FromString(value);
+    if (!raceMask)
+    {
+        LOG_ERROR("server.loading", "CharacterCreating.Disabled.RaceMask has malformed value '{}', no race is disabled.",
+            value);
+        return RaceMask();
+    }
+
+    return *raceMask;
 }

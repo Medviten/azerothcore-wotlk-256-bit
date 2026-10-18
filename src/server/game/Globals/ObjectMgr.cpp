@@ -3383,7 +3383,10 @@ void ObjectMgr::LoadItemTemplates()
         itemTemplate.SellPrice                 = uint32(fields[11].Get<uint32>());
         itemTemplate.InventoryType             = uint32(fields[12].Get<uint8>());
         itemTemplate.AllowableClass            = fields[13].Get<int32>();
-        itemTemplate.AllowableRace             = fields[14].Get<int32>();
+        if (Optional<RaceMask> allowableRace = sRaceMgr->ReadRaceMask(fields[14], "item_template", "AllowableRace"))
+            itemTemplate.AllowableRace         = *allowableRace;
+        else
+            itemTemplate.AllowableRace         = RaceMask::All();
         itemTemplate.ItemLevel                 = uint32(fields[15].Get<uint16>());
         itemTemplate.RequiredLevel             = uint32(fields[16].Get<uint8>());
         itemTemplate.RequiredSkill             = uint32(fields[17].Get<uint16>());
@@ -3540,10 +3543,9 @@ void ObjectMgr::LoadItemTemplates()
 
         if (itemTemplate.HasFlag2(ITEM_FLAG2_FACTION_HORDE))
         {
-            if (FactionEntry const* faction = sFactionStore.LookupEntry(HORDE))
-                if ((itemTemplate.AllowableRace & faction->BaseRepRaceMask[0]) == 0)
-                    LOG_ERROR("sql.sql", "Item (Entry: {}) has value ({}) in `AllowableRace` races, not compatible with ITEM_FLAG2_FACTION_HORDE ({}) in Flags field, item cannot be equipped or used by these races.",
-                                     entry, itemTemplate.AllowableRace, ITEM_FLAG2_FACTION_HORDE);
+            if (!(itemTemplate.AllowableRace & sRaceMgr->GetHordeRaceMask()))
+                LOG_ERROR("sql.sql", "Item (Entry: {}) has value ({}) in `AllowableRace` races, not compatible with ITEM_FLAG2_FACTION_HORDE ({}) in Flags field, item cannot be equipped or used by these races.",
+                          entry, itemTemplate.AllowableRace, ITEM_FLAG2_FACTION_HORDE);
 
             if (itemTemplate.HasFlag2(ITEM_FLAG2_FACTION_ALLIANCE))
                 LOG_ERROR("sql.sql", "Item (Entry: {}) has value ({}) in `Flags2` flags (ITEM_FLAG2_FACTION_ALLIANCE) and ITEM_FLAG2_FACTION_HORDE ({}) in Flags field, this is a wrong combination.",
@@ -3551,10 +3553,9 @@ void ObjectMgr::LoadItemTemplates()
         }
         else if (itemTemplate.HasFlag2(ITEM_FLAG2_FACTION_ALLIANCE))
         {
-            if (FactionEntry const* faction = sFactionStore.LookupEntry(ALLIANCE))
-                if ((itemTemplate.AllowableRace & faction->BaseRepRaceMask[0]) == 0)
-                    LOG_ERROR("sql.sql", "Item (Entry: {}) has value ({}) in `AllowableRace` races, not compatible with ITEM_FLAG2_FACTION_ALLIANCE ({}) in Flags field, item cannot be equipped or used by these races.",
-                                     entry, itemTemplate.AllowableRace, ITEM_FLAG2_FACTION_ALLIANCE);
+            if (!(itemTemplate.AllowableRace & sRaceMgr->GetAllianceRaceMask()))
+                LOG_ERROR("sql.sql", "Item (Entry: {}) has value ({}) in `AllowableRace` races, not compatible with ITEM_FLAG2_FACTION_ALLIANCE ({}) in Flags field, item cannot be equipped or used by these races.",
+                          entry, itemTemplate.AllowableRace, ITEM_FLAG2_FACTION_ALLIANCE);
         }
 
         if (itemTemplate.BuyCount <= 0)
@@ -4528,7 +4529,10 @@ void ObjectMgr::LoadPlayerInfo()
             do
             {
                 Field* fields = result->Fetch();
-                uint32 raceMask = fields[0].Get<uint32>();
+                Optional<RaceMask> raceMask = sRaceMgr->ReadRaceMask(fields[0], "playercreateinfo_skills", "raceMask");
+                if (!raceMask)
+                    continue;
+
                 uint32 classMask = fields[1].Get<uint32>();
                 PlayerCreateInfoSkill skill;
                 skill.SkillId = fields[2].Get<uint16>();
@@ -4536,13 +4540,13 @@ void ObjectMgr::LoadPlayerInfo()
 
                 if (skill.Rank >= MAX_SKILL_STEP)
                 {
-                    LOG_ERROR("sql.sql", "Skill rank value {} set for skill {} raceMask {} classMask {} is too high, max allowed value is {}", skill.Rank, skill.SkillId, raceMask, classMask, MAX_SKILL_STEP);
+                    LOG_ERROR("sql.sql", "Skill rank value {} set for skill {} raceMask {} classMask {} is too high, max allowed value is {}", skill.Rank, skill.SkillId, *raceMask, classMask, MAX_SKILL_STEP);
                     continue;
                 }
 
-                if (raceMask != 0 && !(raceMask & sRaceMgr->GetPlayableRaceMask()))
+                if (*raceMask && !(*raceMask & sRaceMgr->GetPlayableRaceMask()))
                 {
-                    LOG_ERROR("sql.sql", "Wrong race mask {} in `playercreateinfo_skills` table, ignoring.", raceMask);
+                    LOG_ERROR("sql.sql", "Wrong race mask {} in `playercreateinfo_skills` table, ignoring.", *raceMask);
                     continue;
                 }
 
@@ -4560,7 +4564,7 @@ void ObjectMgr::LoadPlayerInfo()
 
                 for (uint32 raceIndex = RACE_HUMAN; raceIndex < sRaceMgr->GetMaxRaces(); ++raceIndex)
                 {
-                    if (raceMask == 0 || ((1 << (raceIndex - 1)) & raceMask))
+                    if (raceMask->IsEmpty() || raceMask->HasRace(raceIndex))
                     {
                         for (uint32 classIndex = CLASS_WARRIOR; classIndex < MAX_CLASSES; ++classIndex)
                         {
@@ -4603,13 +4607,16 @@ void ObjectMgr::LoadPlayerInfo()
             do
             {
                 Field* fields = result->Fetch();
-                uint32 raceMask = fields[0].Get<uint32>();
+                Optional<RaceMask> raceMask = sRaceMgr->ReadRaceMask(fields[0], "playercreateinfo_spell_custom", "racemask");
+                if (!raceMask)
+                    continue;
+
                 uint32 classMask = fields[1].Get<uint32>();
                 uint32 spellId = fields[2].Get<uint32>();
 
-                if (raceMask != 0 && !(raceMask & sRaceMgr->GetPlayableRaceMask()))
+                if (*raceMask && !(*raceMask & sRaceMgr->GetPlayableRaceMask()))
                 {
-                    LOG_ERROR("sql.sql", "Wrong race mask {} in `playercreateinfo_spell_custom` table, ignoring.", raceMask);
+                    LOG_ERROR("sql.sql", "Wrong race mask {} in `playercreateinfo_spell_custom` table, ignoring.", *raceMask);
                     continue;
                 }
 
@@ -4621,7 +4628,7 @@ void ObjectMgr::LoadPlayerInfo()
 
                 for (uint32 raceIndex = RACE_HUMAN; raceIndex < sRaceMgr->GetMaxRaces(); ++raceIndex)
                 {
-                    if (raceMask == 0 || ((1 << (raceIndex - 1)) & raceMask))
+                    if (raceMask->IsEmpty() || raceMask->HasRace(raceIndex))
                     {
                         for (uint32 classIndex = CLASS_WARRIOR; classIndex < MAX_CLASSES; ++classIndex)
                         {
@@ -4661,13 +4668,16 @@ void ObjectMgr::LoadPlayerInfo()
             do
             {
                 Field* fields    = result->Fetch();
-                uint32 raceMask  = fields[0].Get<uint32>();
+                Optional<RaceMask> raceMask = sRaceMgr->ReadRaceMask(fields[0], "playercreateinfo_cast_spell", "raceMask");
+                if (!raceMask)
+                    continue;
+
                 uint32 classMask = fields[1].Get<uint32>();
                 uint32 spellId   = fields[2].Get<uint32>();
 
-                if (raceMask != 0 && !(raceMask & sRaceMgr->GetPlayableRaceMask()))
+                if (*raceMask && !(*raceMask & sRaceMgr->GetPlayableRaceMask()))
                 {
-                    LOG_ERROR("sql.sql", "Wrong race mask {} in `playercreateinfo_cast_spell` table, ignoring.", raceMask);
+                    LOG_ERROR("sql.sql", "Wrong race mask {} in `playercreateinfo_cast_spell` table, ignoring.", *raceMask);
                     continue;
                 }
 
@@ -4679,7 +4689,7 @@ void ObjectMgr::LoadPlayerInfo()
 
                 for (uint32 raceIndex = RACE_HUMAN; raceIndex < sRaceMgr->GetMaxRaces(); ++raceIndex)
                 {
-                    if (raceMask == 0 || ((1 << (raceIndex - 1)) & raceMask))
+                    if (raceMask->IsEmpty() || raceMask->HasRace(raceIndex))
                     {
                         for (uint32 classIndex = CLASS_WARRIOR; classIndex < MAX_CLASSES; ++classIndex)
                         {
@@ -5384,7 +5394,7 @@ void ObjectMgr::LoadQuests()
             if (!(qinfo->AllowableRaces & sRaceMgr->GetPlayableRaceMask()))
             {
                 LOG_ERROR("sql.sql", "Quest {} does not contain any playable races in `AllowableRaces` ({}), value set to 0 (all races).", qinfo->GetQuestId(), qinfo->AllowableRaces);
-                qinfo->AllowableRaces = 0;
+                qinfo->AllowableRaces = RaceMask();
             }
         }
         // RequiredSkillId, can be 0
@@ -9707,7 +9717,6 @@ int32 ObjectMgr::GetBaseReputationOf(FactionEntry const* factionEntry, uint8 rac
     if (!factionEntry)
         return 0;
 
-    uint32 raceMask = (1 << (race - 1));
     uint32 classMask = (1 << (playerClass - 1));
 
     for (int i = 0; i < 4; i++)
@@ -9715,7 +9724,7 @@ int32 ObjectMgr::GetBaseReputationOf(FactionEntry const* factionEntry, uint8 rac
         if ((!factionEntry->BaseRepClassMask[i] ||
                 factionEntry->BaseRepClassMask[i] & classMask) &&
                 (!factionEntry->BaseRepRaceMask[i] ||
-                 factionEntry->BaseRepRaceMask[i] & raceMask))
+                 RaceMask::FromLegacy(factionEntry->BaseRepRaceMask[i]).HasRace(race)))
             return factionEntry->BaseRepValue[i];
     }
 
@@ -9914,9 +9923,12 @@ void ObjectMgr::LoadMailLevelRewards()
         Field* fields = result->Fetch();
 
         uint8 level           = fields[0].Get<uint8>();
-        uint32 raceMask       = fields[1].Get<uint32>();
+        Optional<RaceMask> raceMask = sRaceMgr->ReadRaceMask(fields[1], "mail_level_reward", "raceMask");
         uint32 mailTemplateId = fields[2].Get<uint32>();
         uint32 senderEntry    = fields[3].Get<uint32>();
+
+        if (!raceMask)
+            continue;
 
         if (level > MAX_LEVEL)
         {
@@ -9924,9 +9936,9 @@ void ObjectMgr::LoadMailLevelRewards()
             continue;
         }
 
-        if (!(raceMask & sRaceMgr->GetPlayableRaceMask()))
+        if (!(*raceMask & sRaceMgr->GetPlayableRaceMask()))
         {
-            LOG_ERROR("sql.sql", "Table `mail_level_reward` have raceMask ({}) for level {} that not include any player races, ignoring.", raceMask, level);
+            LOG_ERROR("sql.sql", "Table `mail_level_reward` have raceMask ({}) for level {} that not include any player races, ignoring.", *raceMask, level);
             continue;
         }
 
@@ -9942,7 +9954,7 @@ void ObjectMgr::LoadMailLevelRewards()
             continue;
         }
 
-        _mailLevelRewardStore[level].push_back(MailLevelReward(raceMask, mailTemplateId, senderEntry));
+        _mailLevelRewardStore[level].push_back(MailLevelReward(*raceMask, mailTemplateId, senderEntry));
 
         ++count;
     } while (result->NextRow());

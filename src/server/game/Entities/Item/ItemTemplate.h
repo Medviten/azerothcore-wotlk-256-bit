@@ -18,6 +18,7 @@
 #ifndef _ITEMPROTOTYPE_H
 #define _ITEMPROTOTYPE_H
 
+#include "RaceMask.h"
 #include "SharedDefines.h"
 #include "WorldPacket.h"
 #include <unordered_map>
@@ -631,7 +632,7 @@ struct ItemTemplate
     uint32 SellPrice;
     uint32 InventoryType;
     uint32 AllowableClass;
-    uint32 AllowableRace;
+    RaceMask AllowableRace;
     uint32 ItemLevel;
     uint32 RequiredLevel;
     uint32 RequiredSkill;                                   // id from SkillLine.dbc

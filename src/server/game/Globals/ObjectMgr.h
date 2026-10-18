@@ -548,9 +548,9 @@ struct PetLevelInfo
 struct MailLevelReward
 {
     MailLevelReward()  = default;
-    MailLevelReward(uint32 _raceMask, uint32 _mailTemplateId, uint32 _senderEntry) : raceMask(_raceMask), mailTemplateId(_mailTemplateId), senderEntry(_senderEntry) {}
+    MailLevelReward(RaceMask _raceMask, uint32 _mailTemplateId, uint32 _senderEntry) : raceMask(_raceMask), mailTemplateId(_mailTemplateId), senderEntry(_senderEntry) {}
 
-    uint32 raceMask{0};
+    RaceMask raceMask;
     uint32 mailTemplateId{0};
     uint32 senderEntry{0};
 };
@@ -1165,7 +1165,7 @@ public:
         return nullptr;
     }
 
-    MailLevelReward const* GetMailLevelReward(uint32 level, uint32 raceMask)
+    MailLevelReward const* GetMailLevelReward(uint32 level, RaceMask const& raceMask)
     {
         MailLevelRewardContainer::const_iterator map_itr = _mailLevelRewardStore.find(level);
         if (map_itr == _mailLevelRewardStore.end())

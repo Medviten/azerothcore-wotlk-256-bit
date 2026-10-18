@@ -214,10 +214,10 @@ struct npc_pet_gen_argent_pony_bridle : public ScriptedAI
                     }
 
                     // Generate Banners
-                    uint32 mask = player->GetTeamId(true) ? sRaceMgr->GetHordeRaceMask() : sRaceMgr->GetAllianceRaceMask();
+                    RaceMask const& mask = player->GetTeamId(true) ? sRaceMgr->GetHordeRaceMask() : sRaceMgr->GetAllianceRaceMask();
                     for (auto const& [raceId, banner] : argentBanners)
                     {
-                        if ((mask & (1 << (raceId - 1))) && player->HasAchieved(banner.achievement))
+                        if (mask.HasRace(raceId) && player->HasAchieved(banner.achievement))
                             _banners[raceId] = true;
                     }
                 }

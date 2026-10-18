@@ -19,6 +19,7 @@
 #include "Formulas.h"
 #include "Opcodes.h"
 #include "Player.h"
+#include "RaceMgr.h"
 #include "World.h"
 
 Quest::Quest(Field* questRecord)
@@ -38,7 +39,7 @@ Quest::Quest(Field* questRecord)
     Type = questRecord[5].Get<uint16>();
     SuggestedPlayers = questRecord[6].Get<uint8>();
     TimeAllowed = questRecord[7].Get<uint32>();
-    AllowableRaces = questRecord[8].Get<uint32>();
+    AllowableRaces = sRaceMgr->ReadRaceMask(questRecord[8], "quest_template", "AllowableRaces").value_or(RaceMask());
     RequiredFactionId1 = questRecord[9].Get<uint16>();
     RequiredFactionId2 = questRecord[10].Get<uint16>();
     RequiredFactionValue1 = questRecord[11].Get<int32>();

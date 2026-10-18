@@ -20,6 +20,7 @@
 
 #include "DatabaseEnv.h"
 #include "ObjectGuid.h"
+#include "RaceMask.h"
 #include "SharedDefines.h"
 #include <map>
 
@@ -36,17 +37,23 @@ public:
     static RaceMgr* instance();
 
     static void LoadRaces();
-    static uint8 GetMaxRaces() { return _maxRaces; }
-    static void SetMaxRaces(uint8 max) { _maxRaces = max; }
-    static uint32 GetPlayableRaceMask() { return _playableRaceMask; }
-    static uint32 GetAllianceRaceMask() { return _allianceRaceMask; }
-    static uint32 GetHordeRaceMask() { return _hordeRaceMask; }
-private:
-    static uint8 _maxRaces; // Max playable race + 1
+    static uint16 GetMaxRaces() { return _maxRaces; }
+    static void SetMaxRaces(uint16 max) { _maxRaces = max; }
+    static RaceMask const& GetPlayableRaceMask() { return _playableRaceMask; }
+    static RaceMask const& GetAllianceRaceMask() { return _allianceRaceMask; }
+    static RaceMask const& GetHordeRaceMask() { return _hordeRaceMask; }
 
-    static uint32 _playableRaceMask;
-    static uint32 _allianceRaceMask;
-    static uint32 _hordeRaceMask;
+    /// Reads a race mask column (see RaceMask::FromString). Logs and returns no value if it is malformed.
+    static Optional<RaceMask> ReadRaceMask(Field const& field, std::string_view table, std::string_view column);
+
+    /// Races players cannot create or change to, from CharacterCreating.Disabled.RaceMask.
+    static RaceMask GetCreationDisabledRaceMask();
+private:
+    static uint16 _maxRaces; // Max playable race + 1
+
+    static RaceMask _playableRaceMask;
+    static RaceMask _allianceRaceMask;
+    static RaceMask _hordeRaceMask;
 };
 
 #define sRaceMgr RaceMgr::instance()

@@ -669,7 +669,7 @@ bool AuctionHouseUsablePlayerInfo::PlayerCanUseItem(ItemTemplate const* proto) c
             return false;
     }
 
-    if ((proto->AllowableClass & classMask) == 0 || (proto->AllowableRace & raceMask) == 0)
+    if ((proto->AllowableClass & classMask) == 0 || !(proto->AllowableRace & raceMask))
         return false;
 
     if (proto->RequiredSkill != 0)

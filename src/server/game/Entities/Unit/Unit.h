@@ -25,6 +25,7 @@
 #include "MotionMaster.h"
 #include "Object.h"
 #include "PetDefines.h"
+#include "RaceMask.h"
 #include "SharedDefines.h"
 #include "SpellAuraDefines.h"
 #include "SpellDefines.h"
@@ -838,7 +839,7 @@ public:
     // Race methods
     [[nodiscard]] uint8 getRace(bool original = false) const;
     void setRace(uint8 race);
-    [[nodiscard]] uint32 getRaceMask() const { return 1 << (getRace(true) - 1); }
+    [[nodiscard]] RaceMask getRaceMask() const { return RaceMask::FromRace(getRace(true)); }
     [[nodiscard]] DisplayRace GetDisplayRaceFromModelId(uint32 modelId) const;
     [[nodiscard]] DisplayRace GetDisplayRace() const { return GetDisplayRaceFromModelId(GetDisplayId()); };
 

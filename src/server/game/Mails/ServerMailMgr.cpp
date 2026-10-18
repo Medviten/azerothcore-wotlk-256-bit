@@ -27,6 +27,7 @@
 #include "QuestDef.h"
 #include "RaceMgr.h"
 #include "SharedDefines.h"
+#include "StringConvert.h"
 #include "Timer.h"
 
 ServerMailMgr* ServerMailMgr::instance()
@@ -176,7 +177,7 @@ void ServerMailMgr::LoadMailServerTemplatesConditions()
 
         uint32 templateID                 = fields[0].Get<uint32>();
         std::string_view conditionTypeStr = fields[1].Get<std::string_view>();
-        uint32 conditionValue             = fields[2].Get<uint32>();
+        std::string_view conditionValueStr = fields[2].Get<std::string_view>();
         uint32 conditionState             = fields[3].Get<uint32>();
 
         if (_serverMailStore.find(templateID) == _serverMailStore.end())
@@ -196,6 +197,25 @@ void ServerMailMgr::LoadMailServerTemplatesConditions()
 
         if (conditionState && !ConditionTypeUsesConditionState(conditionType))
             LOG_WARN("sql.sql", "Table `mail_server_template_conditions` has conditionState value ({}) for conditionType ({}) which does not use conditionState.", conditionState, conditionTypeStr);
+
+        // race conditions hold a race mask string, all others a plain number
+        uint32 conditionValue = 0;
+        RaceMask conditionRaceMask;
+        if (conditionType == ServerMailConditionType::Race)
+        {
+            Optional<RaceMask> raceMask = sRaceMgr->ReadRaceMask(fields[2], "mail_server_template_conditions", "conditionValue");
+            if (!raceMask)
+                continue;
+
+            conditionRaceMask = *raceMask;
+        }
+        else if (Optional<uint32> value = Acore::StringTo<uint32>(conditionValueStr))
+            conditionValue = *value;
+        else
+        {
+            LOG_ERROR("sql.sql", "Table `mail_server_template_conditions` has non-numeric conditionValue '{}' for conditionType '{}', templateID {}, skipped.", conditionValueStr, conditionTypeStr, templateID);
+            continue;
+        }
 
         switch (conditionType)
         {
@@ -255,9 +275,9 @@ void ServerMailMgr::LoadMailServerTemplatesConditions()
             }
             break;
         case ServerMailConditionType::Race:
-            if (conditionValue & ~sRaceMgr->GetPlayableRaceMask())
+            if (conditionRaceMask & ~sRaceMgr->GetPlayableRaceMask())
             {
-                LOG_ERROR("sql.sql", "Table `mail_server_template_conditions` has conditionType 'Race' with invalid conditionValue ({}) for templateID {}, skipped.", conditionValue, templateID);
+                LOG_ERROR("sql.sql", "Table `mail_server_template_conditions` has conditionType 'Race' with invalid conditionValue ({}) for templateID {}, skipped.", conditionRaceMask, templateID);
                 continue;
             }
             break;
@@ -282,6 +302,7 @@ void ServerMailMgr::LoadMailServerTemplatesConditions()
         ServerMailCondition condition;
         condition.type = conditionType;
         condition.value = conditionValue;
+        condition.raceMask = conditionRaceMask;
         condition.state = conditionState;
         _serverMailStore[templateID].conditions.push_back(condition);
 
@@ -360,7 +381,7 @@ bool ServerMailCondition::CheckCondition(Player* player) const
     case ServerMailConditionType::Faction:
         return player->GetTeamId() == value;
     case ServerMailConditionType::Race:
-        return (player->getRaceMask() & value) != 0;
+        return bool(player->getRaceMask() & raceMask);
     case ServerMailConditionType::Class:
         return (player->getClassMask() & value) != 0;
     case ServerMailConditionType::AccountFlags:
