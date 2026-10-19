@@ -427,7 +427,9 @@ void WorldSession::HandleItemQuerySingleOpcode(WorldPacket& recvData)
         queryData << pProto->SellPrice;
         queryData << pProto->InventoryType;
         queryData << pProto->AllowableClass;
-        queryData << pProto->AllowableRace.ToLegacy();               // the client only knows races 1-32
+        // 256-bit race mask, 8 uint32 (wowdecomp-256-bit client)
+        for (uint32 i = 0; i < RaceMask::FIELD_COUNT; ++i)
+            queryData << pProto->AllowableRace.GetChunk32(i);
         queryData << pProto->ItemLevel;
         queryData << pProto->RequiredLevel;
         queryData << pProto->RequiredSkill;

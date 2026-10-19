@@ -32,6 +32,8 @@
 #include "SpellAuras.h"
 #include "SpellMgr.h"
 #include "WorldState.h"
+#include <array>
+#include <limits>
 
 // Checks if object meets the condition
 // Can have CONDITION_SOURCE_TYPE_NONE && !mReferenceId if called from a special event (ie: eventAI)
@@ -138,7 +140,7 @@ bool Condition::Meets(ConditionSourceInfo& sourceInfo)
     case CONDITION_RACE:
     {
         if (Unit* unit = object->ToUnit())
-            condMeets = bool(unit->getRaceMask() & RaceMask::FromChunks32({ ConditionValue1, ConditionValue2, ConditionValue3 }));
+            condMeets = bool(unit->getRaceMask() & Races);
         break;
     }
     case CONDITION_GENDER:
@@ -1153,7 +1155,7 @@ void ConditionMgr::LoadConditions(bool isReload)
     }
 
     QueryResult result = WorldDatabase.Query("SELECT SourceTypeOrReferenceId, SourceGroup, SourceEntry, SourceId, ElseGroup, ConditionTypeOrReference, ConditionTarget, "
-                                             " ConditionValue1, ConditionValue2, ConditionValue3, NegativeCondition, ErrorType, ErrorTextId, ScriptName FROM conditions");
+                                             " ConditionValue1, ConditionValue2, ConditionValue3, NegativeCondition, ErrorType, ErrorTextId, ScriptName, ConditionValue4 FROM conditions");
 
     if (!result)
     {
@@ -1175,9 +1177,28 @@ void ConditionMgr::LoadConditions(bool isReload)
         cond->ElseGroup                     = fields[4].Get<uint32>();
         int32 iConditionTypeOrReference     = fields[5].Get<int32>();
         cond->ConditionTarget               = fields[6].Get<uint8>();
-        cond->ConditionValue1               = fields[7].Get<uint32>();
-        cond->ConditionValue2               = fields[8].Get<uint32>();
-        cond->ConditionValue3               = fields[9].Get<uint32>();
+
+        // CONDITION_RACE uses ConditionValue1-4 as the four 64-bit words of a race mask (races 1-64 first), so SQL
+        // bitwise math keeps working on ConditionValue1; every other condition type takes 32-bit values 1-3 only
+        std::array<uint64, RaceMask::WORD64_COUNT> conditionValues =
+            { fields[7].Get<uint64>(), fields[8].Get<uint64>(), fields[9].Get<uint64>(), fields[14].Get<uint64>() };
+        if (iConditionTypeOrReference == CONDITION_RACE)
+            cond->Races = RaceMask::FromWords64(conditionValues);
+        else if (conditionValues[0] > std::numeric_limits<uint32>::max()
+            || conditionValues[1] > std::numeric_limits<uint32>::max()
+            || conditionValues[2] > std::numeric_limits<uint32>::max() || conditionValues[3])
+        {
+            LOG_ERROR("sql.sql", "Condition (SourceTypeOrReferenceId {}, SourceGroup {}, SourceEntry {}, "
+                "ConditionTypeOrReference {}) has a value above 32 bits or ConditionValue4 set, which only race "
+                "conditions use, skipped.",
+                iSourceTypeOrReferenceId, cond->SourceGroup, cond->SourceEntry, iConditionTypeOrReference);
+            delete cond;
+            continue;
+        }
+
+        cond->ConditionValue1               = uint32(conditionValues[0]);
+        cond->ConditionValue2               = uint32(conditionValues[1]);
+        cond->ConditionValue3               = uint32(conditionValues[2]);
         cond->NegativeCondition             = fields[10].Get<uint8>();
         cond->ErrorType                     = fields[11].Get<uint32>();
         cond->ErrorTextId                   = fields[12].Get<uint32>();
@@ -2206,11 +2227,9 @@ bool ConditionMgr::isConditionTypeValid(Condition* cond)
     }
     case CONDITION_RACE:
     {
-        // value1-3 hold races 1-32, 33-64 and 65-96
-        RaceMask raceMask = RaceMask::FromChunks32({ cond->ConditionValue1, cond->ConditionValue2, cond->ConditionValue3 });
-        if (!(raceMask & sRaceMgr->GetPlayableRaceMask()))
+        if (!(cond->Races & sRaceMgr->GetPlayableRaceMask()))
         {
-            LOG_ERROR("sql.sql", "Race condition has non existing racemask ({}), skipped", raceMask & ~sRaceMgr->GetPlayableRaceMask());
+            LOG_ERROR("sql.sql", "Race condition has non existing racemask ({}), skipped", cond->Races & ~sRaceMgr->GetPlayableRaceMask());
             return false;
         }
         break;

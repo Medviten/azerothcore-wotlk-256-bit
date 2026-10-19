@@ -31,7 +31,7 @@
  *
  * Laid out like the widened DBC files (Faction, SkillLineAbility, SkillRaceClassInfo, TalentTab): 8 uint32 fields,
  * races 1-32 first, so DBC structs hold it directly. In the database a mask is four BIGINT columns of 64 bits each
- * (see FromWords64()). The 3.3.5a item query packet still carries 32 bits: see ToLegacy().
+ * (see FromWords64()). Packets (item query, who) carry it as 8 uint32 chunks: see GetChunk32().
  */
 class RaceMask
 {
@@ -177,7 +177,10 @@ public:
         return index < WORD64_COUNT ? uint64(_fields[index * 2 + 1]) << 32 | _fields[index * 2] : 0;
     }
 
-    /// Lowest 32 bits, the part the 3.3.5a item query packet carries (races 1-32).
+    /// 32-bit chunk i (bits 32 * i to 32 * i + 31), as sent in packets and stored in DBC files.
+    [[nodiscard]] constexpr uint32 GetChunk32(uint32 index) const { return index < FIELD_COUNT ? _fields[index] : 0; }
+
+    /// Lowest 32 bits (races 1-32), the whole mask as far as a stock 3.3.5a client is concerned.
     [[nodiscard]] constexpr uint32 ToLegacy() const { return _fields[0]; }
 
     /// Shortest "0x..." representation, also accepted by FromString().

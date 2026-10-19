@@ -19,6 +19,7 @@
 #define ACORE_CONDITIONMGR_H
 
 #include "Define.h"
+#include "RaceMask.h"
 #include <list>
 #include <map>
 
@@ -205,6 +206,7 @@ struct Condition
     uint32                  ConditionValue1;
     uint32                  ConditionValue2;
     uint32                  ConditionValue3;
+    RaceMask                Races;             // CONDITION_RACE: ConditionValue1-4 as 64-bit words (races 1-256)
     uint32                  ErrorType;
     uint32                  ErrorTextId;
     uint32                  ReferenceId;

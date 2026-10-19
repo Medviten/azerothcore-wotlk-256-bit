@@ -223,7 +223,8 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
 
     uint32 matchCount = 0;
 
-    uint32 levelMin, levelMax, racemask, classmask, zonesCount, strCount;
+    uint32 levelMin, levelMax, classmask, zonesCount, strCount;
+    std::array<uint32, RaceMask::FIELD_COUNT> raceChunks = {};
     std::array<uint32, 10> zoneids = {};                    // 10 is client limit
     std::string packetPlayerName, packetGuildName;
 
@@ -233,7 +234,11 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
 
     recvData >> packetGuildName;                            // guild name, case sensitive...
 
-    recvData >> racemask;                                   // race mask
+    // race mask, 8 uint32, bit = race id (wowdecomp-256-bit client)
+    for (uint32& chunk : raceChunks)
+        recvData >> chunk;
+    RaceMask racemask = RaceMask::FromChunks32({ raceChunks[0], raceChunks[1], raceChunks[2], raceChunks[3],
+        raceChunks[4], raceChunks[5], raceChunks[6], raceChunks[7] });
     recvData >> classmask;                                  // class mask
     recvData >> zonesCount;                                 // zones count, client limit = 10 (2.0.10)
 
@@ -321,10 +326,9 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
             continue;
         }
 
-        // check if race matches racemask
-        // the client mask only covers races 0-31, races above that are only listed when it does not filter by race
+        // check if race matches racemask (bit = race id, so HasRace() is offset by one)
         uint32 race = target.GetRace();
-        if (race < 32 ? !(racemask & (1 << race)) : racemask != 0xFFFFFFFF)
+        if (!racemask.HasRace(race + 1))
         {
             continue;
         }

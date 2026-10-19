@@ -966,7 +966,8 @@ struct FactionEntry
 
     [[nodiscard]] bool CanBeSetAtWar() const
     {
-        return reputationListID >= 0 && BaseRepRaceMask[0] == RaceMask::FromLegacy(1791);
+        // factions of every original playable race (1791); custom races only ever get added to them
+        return reputationListID >= 0 && (BaseRepRaceMask[0] & RaceMask::FromLegacy(1791)) == RaceMask::FromLegacy(1791);
     }
 };
 

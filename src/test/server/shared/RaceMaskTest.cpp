@@ -77,6 +77,33 @@ TEST(RaceMaskTest, Words64MatchDatabaseColumns)
     EXPECT_EQ(RaceMask::FromWords64({ mask.GetWord64(0), mask.GetWord64(1), mask.GetWord64(2), mask.GetWord64(3) }), mask);
 }
 
+TEST(RaceMaskTest, Chunks32MatchPacketLayout)
+{
+    // item query and who packets send the 8 chunks in order, races 1-32 first
+    RaceMask mask = RaceMask::FromRace(1) | RaceMask::FromRace(34) | RaceMask::FromRace(255);
+    EXPECT_EQ(mask.GetChunk32(0), 1u);
+    EXPECT_EQ(mask.GetChunk32(1), 2u);
+    EXPECT_EQ(mask.GetChunk32(7), 1u << 30);
+    EXPECT_EQ(mask.GetChunk32(8), 0u);
+    EXPECT_EQ(RaceMask::FromChunks32({ mask.GetChunk32(0), mask.GetChunk32(1), mask.GetChunk32(2), mask.GetChunk32(3),
+        mask.GetChunk32(4), mask.GetChunk32(5), mask.GetChunk32(6), mask.GetChunk32(7) }), mask);
+
+    // who requests use bit = race id, so race N is checked with HasRace(N + 1)
+    RaceMask who = RaceMask::FromChunks32({ 1u << 2, 1u << 3 });
+    EXPECT_TRUE(who.HasRace(2 + 1));
+    EXPECT_TRUE(who.HasRace(35 + 1));
+}
+
+TEST(RaceMaskTest, CanBeSetAtWarMaskCheck)
+{
+    // CanBeSetAtWar(): the first faction mask must contain all original playable races (1791)
+    RaceMask const original = RaceMask::FromLegacy(1791);
+    RaceMask modded = original | RaceMask::FromRace(9) | RaceMask::FromRace(22) | RaceMask::FromRace(39);
+    EXPECT_EQ(modded & original, original);
+    EXPECT_NE(RaceMask::FromLegacy(1101) & original, original);
+    EXPECT_NE(RaceMask::FromLegacy(690) & original, original);
+}
+
 TEST(RaceMaskTest, FromStringAcceptsDatabaseFormats)
 {
     EXPECT_EQ(RaceMask::FromString(""), RaceMask());
