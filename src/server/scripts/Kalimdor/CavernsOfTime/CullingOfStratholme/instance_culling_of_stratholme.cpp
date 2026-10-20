@@ -66,8 +66,26 @@ public:
             if (instance->GetPlayersCountExceptGMs() == 1)
                 SetData(DATA_ARTHAS_REPOSITION, 2);
 
-            if (plr->getRace() != RACE_HUMAN && plr->getRace() != RACE_DWARF && plr->getRace() != RACE_GNOME)
-                plr->CastSpell(plr, ((plr->getGender() == GENDER_MALE) ? SPELL_HUMAN_MALE : SPELL_HUMAN_FEMALE), true);
+            // Human, Dwarf and Gnome lookalikes keep their own appearance; everyone else is disguised as a human
+            switch (plr->getRace())
+            {
+                case RACE_HUMAN:
+                case RACE_VRYKUL:
+                case RACE_WORGEN:
+                case RACE_GILNEAN:
+                case RACE_KULTIRAN:
+                case RACE_THINHUMAN:
+                case RACE_DWARF:
+                case RACE_DARKIRONDWARF:
+                case RACE_HORDEEARTHEN:
+                case RACE_ALLIANCEEARTHEN:
+                case RACE_GNOME:
+                case RACE_MECHAGNOME:
+                    break;
+                default:
+                    plr->CastSpell(plr, ((plr->getGender() == GENDER_MALE) ? SPELL_HUMAN_MALE : SPELL_HUMAN_FEMALE), true);
+                    break;
+            }
         }
 
         void OnCreatureCreate(Creature* creature) override

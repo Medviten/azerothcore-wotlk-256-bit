@@ -34,70 +34,73 @@ void PlayerTaxi::InitTaxiNodesForLevel(uint32 race, uint32 chrClass, uint8 level
     }
 
     // race specific initial known nodes: capital and taxi hub masks
+    // (new races share the start area, and so the nodes, of a stock race)
     switch (race)
     {
         case RACE_HUMAN:
+        case RACE_VRYKUL:
+        case RACE_PANDAREN:
+        case RACE_ALLIANCEPANDAREN:
+        case RACE_VOIDELF:
+        case RACE_KULTIRAN:
+        case RACE_THINHUMAN:
+        case RACE_HIGHELF:
+        case RACE_ALLIANCEDRACTHYR:
             SetTaximaskNode(2);
             break;     // Human
         case RACE_ORC:
+        case RACE_GOBLIN:
+        case RACE_FELORC:
+        case RACE_MAGHARORC:
+        case RACE_OGRE:
+        case RACE_HORDEDRACTHYR:
+        case RACE_HORDEEARTHEN:
             SetTaximaskNode(23);
             break;     // Orc
         case RACE_DWARF:
+        case RACE_TUSKARR:
+        case RACE_DARKIRONDWARF:
+        case RACE_ALLIANCEEARTHEN:
             SetTaximaskNode(6);
             break;     // Dwarf
         case RACE_NIGHTELF:
+        case RACE_WORGEN:
+        case RACE_GILNEAN:
             SetTaximaskNode(26);
             SetTaximaskNode(27);
             break;     // Night Elf
         case RACE_UNDEAD_PLAYER:
+        case RACE_SKELETON:
+        case RACE_NORTHRENDSKELETON:
             SetTaximaskNode(11);
-            break;     // Undead
+            break;// Undead
         case RACE_TAUREN:
+        case RACE_TAUNKA:
+        case RACE_HORDEPANDAREN:
+        case RACE_HIGHMOUNTAINTAUREN:
+        case RACE_VULPERA:
             SetTaximaskNode(22);
             break;     // Tauren
         case RACE_GNOME:
+        case RACE_MECHAGNOME:
             SetTaximaskNode(6);
             break;     // Gnome
         case RACE_TROLL:
+        case RACE_FORESTTROLL:
+        case RACE_ICETROLL:
+        case RACE_ZANDALARITROLL:
             SetTaximaskNode(23);
             break;     // Troll
         case RACE_BLOODELF:
+        case RACE_NAGA:
+        case RACE_NIGHTBORNE:
             SetTaximaskNode(82);
             break;     // Blood Elf
         case RACE_DRAENEI:
+        case RACE_BROKEN:
+        case RACE_LIGHTFORGEDDRAENEI:
             SetTaximaskNode(94);
             break;     // Draenei
-        case RACE_GOBLIN:
-            SetTaximaskNode(23);
-            break;     // Goblin
-        case RACE_WORGEN:
-            SetTaximaskNode(26);
-            SetTaximaskNode(27);
-            break;     // Worgen
-        case RACE_HIGHELF:
-            SetTaximaskNode(2);
-            break;     // High Elf
-        case RACE_MAGHARORC:
-            SetTaximaskNode(23);
-            break;     // Mag'har Orc
-        case RACE_OGRE:
-            SetTaximaskNode(23);
-            break;     // Ogre
-        case RACE_DARKIRONDWARF:
-            SetTaximaskNode(6);
-            break;     // Dark Iron Dwarf
-        case RACE_ZANDALARITROLL:
-            SetTaximaskNode(23);
-            break;     // Zandalari Troll
-        case RACE_VULPERA:
-            SetTaximaskNode(22);
-            break;     // Vulpera
-        case RACE_ALLIANCEPANDAREN:
-            SetTaximaskNode(2);
-            break;     // Alliance Pandaren
-        case RACE_HORDEPANDAREN:
-            SetTaximaskNode(22);
-            break;     // Horde Pandaren
     }
 
     // new continent starting masks (It will be accessible only at new map)
