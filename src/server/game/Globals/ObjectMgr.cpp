@@ -8352,101 +8352,104 @@ void ObjectMgr::LoadReputationSpilloverTemplate()
     {
         Field* fields = result->Fetch();
 
-        uint32 factionId                = fields[0].Get<uint16>();
+        uint32 factionId = fields[0].Get<uint16>();
 
-        RepSpilloverTemplate repTemplate;
-
-        repTemplate.faction[0]          = fields[1].Get<uint16>();
-        repTemplate.faction_rate[0]     = fields[2].Get<float>();
-        repTemplate.faction_rank[0]     = fields[3].Get<uint8>();
-        repTemplate.faction[1]          = fields[4].Get<uint16>();
-        repTemplate.faction_rate[1]     = fields[5].Get<float>();
-        repTemplate.faction_rank[1]     = fields[6].Get<uint8>();
-        repTemplate.faction[2]          = fields[7].Get<uint16>();
-        repTemplate.faction_rate[2]     = fields[8].Get<float>();
-        repTemplate.faction_rank[2]     = fields[9].Get<uint8>();
-        repTemplate.faction[3]          = fields[10].Get<uint16>();
-        repTemplate.faction_rate[3]     = fields[11].Get<float>();
-        repTemplate.faction_rank[3]     = fields[12].Get<uint8>();
-        repTemplate.faction[4]          = fields[13].Get<uint16>();
-        repTemplate.faction_rate[4]     = fields[14].Get<float>();
-        repTemplate.faction_rank[4]     = fields[15].Get<uint8>();
-        repTemplate.faction[5]          = fields[16].Get<uint16>();
-        repTemplate.faction_rate[5]     = fields[17].Get<float>();
-        repTemplate.faction_rank[5]     = fields[18].Get<uint8>();
-
-        FactionEntry const* factionEntry = sFactionStore.LookupEntry(factionId);
-
-        if (!factionEntry)
-        {
-            LOG_ERROR("sql.sql", "Faction (faction.dbc) {} does not exist but is used in `reputation_spillover_template`", factionId);
+        if (!IsValidRepSpilloverSource(factionId, "reputation_spillover_template"))
             continue;
-        }
 
-        if (factionEntry->team == 0)
-        {
-            LOG_ERROR("sql.sql", "Faction (faction.dbc) {} in `reputation_spillover_template` does not belong to any team, skipping", factionId);
-            continue;
-        }
+        RepSpilloverTemplate& repTemplate = _repSpilloverTemplateStore[factionId];
 
+        // an empty slot (faction 0) is ignored, whatever its rate and rank
         for (uint32 i = 0; i < MAX_SPILLOVER_FACTIONS; ++i)
-        {
-            if (repTemplate.faction[i])
-            {
-                FactionEntry const* factionSpillover = sFactionStore.LookupEntry(repTemplate.faction[i]);
-
-                if (!factionSpillover)
-                {
-                    LOG_ERROR("sql.sql", "Spillover faction (faction.dbc) {} does not exist but is used in `reputation_spillover_template` for faction {}, skipping", repTemplate.faction[i], factionId);
-                    continue;
-                }
-
-                if (factionSpillover->reputationListID < 0)
-                {
-                    LOG_ERROR("sql.sql", "Spillover faction (faction.dbc) {} for faction {} in `reputation_spillover_template` can not be listed for client, and then useless, skipping", repTemplate.faction[i], factionId);
-                    continue;
-                }
-
-                if (repTemplate.faction_rank[i] >= MAX_REPUTATION_RANK)
-                {
-                    LOG_ERROR("sql.sql", "Rank {} used in `reputation_spillover_template` for spillover faction {} is not valid, skipping", repTemplate.faction_rank[i], repTemplate.faction[i]);
-                    continue;
-                }
-            }
-        }
-
-        FactionEntry const* factionEntry0 = sFactionStore.LookupEntry(repTemplate.faction[0]);
-        if (repTemplate.faction[0] && !factionEntry0)
-        {
-            LOG_ERROR("sql.sql", "Faction (faction.dbc) {} does not exist but is used in `reputation_spillover_template`", repTemplate.faction[0]);
-            continue;
-        }
-        FactionEntry const* factionEntry1 = sFactionStore.LookupEntry(repTemplate.faction[1]);
-        if (repTemplate.faction[1] && !factionEntry1)
-        {
-            LOG_ERROR("sql.sql", "Faction (faction.dbc) {} does not exist but is used in `reputation_spillover_template`", repTemplate.faction[1]);
-            continue;
-        }
-        FactionEntry const* factionEntry2 = sFactionStore.LookupEntry(repTemplate.faction[2]);
-        if (repTemplate.faction[2] && !factionEntry2)
-        {
-            LOG_ERROR("sql.sql", "Faction (faction.dbc) {} does not exist but is used in `reputation_spillover_template`", repTemplate.faction[2]);
-            continue;
-        }
-        FactionEntry const* factionEntry3 = sFactionStore.LookupEntry(repTemplate.faction[3]);
-        if (repTemplate.faction[3] && !factionEntry3)
-        {
-            LOG_ERROR("sql.sql", "Faction (faction.dbc) {} does not exist but is used in `reputation_spillover_template`", repTemplate.faction[3]);
-            continue;
-        }
-
-        _repSpilloverTemplateStore[factionId] = repTemplate;
+            AddRepSpillover(factionId, fields[1 + i * 3].Get<uint16>(), fields[2 + i * 3].Get<float>(),
+                fields[3 + i * 3].Get<uint8>(), "reputation_spillover_template");
 
         ++count;
     } while (result->NextRow());
 
+    // any number of further spillover targets, one per row; overrides a template slot for the same target faction
+    //                                                     0          1               2       3
+    if (QueryResult extraResult = WorldDatabase.Query("SELECT faction, spillover_faction, rate, max_rank FROM reputation_spillover_faction"))
+    {
+        do
+        {
+            Field* fields = extraResult->Fetch();
+
+            uint32 factionId = fields[0].Get<uint32>();
+
+            if (!IsValidRepSpilloverSource(factionId, "reputation_spillover_faction"))
+                continue;
+
+            if (_repSpilloverTemplateStore.find(factionId) == _repSpilloverTemplateStore.end())
+                ++count;
+
+            AddRepSpillover(factionId, fields[1].Get<uint32>(), fields[2].Get<float>(), fields[3].Get<uint8>(),
+                "reputation_spillover_faction");
+        } while (extraResult->NextRow());
+    }
+
     LOG_INFO("server.loading", ">> Loaded {} Reputation Spillover Template in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
+}
+
+bool ObjectMgr::IsValidRepSpilloverSource(uint32 factionId, std::string_view table) const
+{
+    FactionEntry const* factionEntry = sFactionStore.LookupEntry(factionId);
+
+    if (!factionEntry)
+    {
+        LOG_ERROR("sql.sql", "Faction (faction.dbc) {} does not exist but is used in `{}`", factionId, table);
+        return false;
+    }
+
+    if (factionEntry->team == 0)
+    {
+        LOG_ERROR("sql.sql", "Faction (faction.dbc) {} in `{}` does not belong to any team, skipping", factionId, table);
+        return false;
+    }
+
+    return true;
+}
+
+void ObjectMgr::AddRepSpillover(uint32 factionId, uint32 spilloverFactionId, float rate, uint32 rank, std::string_view table)
+{
+    if (!spilloverFactionId)
+        return;
+
+    FactionEntry const* factionSpillover = sFactionStore.LookupEntry(spilloverFactionId);
+
+    if (!factionSpillover)
+    {
+        LOG_ERROR("sql.sql", "Spillover faction (faction.dbc) {} does not exist but is used in `{}` for faction {}, skipping",
+            spilloverFactionId, table, factionId);
+        return;
+    }
+
+    if (factionSpillover->reputationListID < 0)
+    {
+        LOG_ERROR("sql.sql", "Spillover faction (faction.dbc) {} for faction {} in `{}` can not be listed for client, and then useless, skipping",
+            spilloverFactionId, factionId, table);
+        return;
+    }
+
+    if (rank >= MAX_REPUTATION_RANK)
+    {
+        LOG_ERROR("sql.sql", "Rank {} used in `{}` for spillover faction {} is not valid, skipping", rank, table, spilloverFactionId);
+        return;
+    }
+
+    std::vector<RepSpillover>& factions = _repSpilloverTemplateStore[factionId].factions;
+    for (RepSpillover& spillover : factions)
+    {
+        if (spillover.faction == spilloverFactionId)
+        {
+            spillover.rate = rate;
+            spillover.rank = rank;
+            return;
+        }
+    }
+
+    factions.push_back({ spilloverFactionId, rate, rank });
 }
 
 void ObjectMgr::LoadPointsOfInterest()

@@ -583,11 +583,18 @@ struct ReputationOnKillEntry
     bool TeamDependent;
 };
 
+struct RepSpillover
+{
+    uint32 faction;
+    float rate;                                             // the given rep points * rate
+    uint32 rank;                                            // max rank, above this the faction gets no spillover
+};
+
+// Spillover targets of one faction: the slots of `reputation_spillover_template` (at most MAX_SPILLOVER_FACTIONS)
+// followed by any number of `reputation_spillover_faction` rows
 struct RepSpilloverTemplate
 {
-    uint32 faction[MAX_SPILLOVER_FACTIONS];
-    float faction_rate[MAX_SPILLOVER_FACTIONS];
-    uint32 faction_rank[MAX_SPILLOVER_FACTIONS];
+    std::vector<RepSpillover> factions;
 };
 
 struct PointOfInterest
@@ -1618,6 +1625,8 @@ private:
     void LoadScripts(ScriptsType type);
     void LoadQuestRelationsHelper(QuestRelations& map, std::string const& table, bool starter, bool go);
     void PlayerCreateInfoAddItemHelper(uint32 race_, uint32 class_, uint32 itemId, int32 count);
+    [[nodiscard]] bool IsValidRepSpilloverSource(uint32 factionId, std::string_view table) const;
+    void AddRepSpillover(uint32 factionId, uint32 spilloverFactionId, float rate, uint32 rank, std::string_view table);
 
     MailLevelRewardContainer _mailLevelRewardStore;
 

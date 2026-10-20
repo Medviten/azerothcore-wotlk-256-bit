@@ -303,16 +303,13 @@ bool ReputationMgr::SetReputation(FactionEntry const* factionEntry, float standi
         // if spillover definition exists in DB, override DBC
         if (RepSpilloverTemplate const* repTemplate = sObjectMgr->GetRepSpilloverTemplate(factionEntry->ID))
         {
-            for (uint32 i = 0; i < MAX_SPILLOVER_FACTIONS; ++i)
+            for (RepSpillover const& spillover : repTemplate->factions)
             {
-                if (repTemplate->faction[i])
+                if (_player->GetReputationRank(spillover.faction) <= ReputationRank(spillover.rank))
                 {
-                    if (_player->GetReputationRank(repTemplate->faction[i]) <= ReputationRank(repTemplate->faction_rank[i]))
-                    {
-                        // bonuses are already given, so just modify standing by rate
-                        float spilloverRep = standing * repTemplate->faction_rate[i];
-                        SetOneFactionReputation(sFactionStore.LookupEntry(repTemplate->faction[i]), spilloverRep, incremental);
-                    }
+                    // bonuses are already given, so just modify standing by rate
+                    float spilloverRep = standing * spillover.rate;
+                    SetOneFactionReputation(sFactionStore.LookupEntry(spillover.faction), spilloverRep, incremental);
                 }
             }
         }

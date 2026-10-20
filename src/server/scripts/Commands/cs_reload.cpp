@@ -852,9 +852,9 @@ public:
 
     static bool HandleReloadReputationSpilloverTemplateCommand(ChatHandler* handler)
     {
-        LOG_INFO("server.loading", "Reloading `reputation_spillover_template` Table!" );
+        LOG_INFO("server.loading", "Reloading `reputation_spillover_template` and `reputation_spillover_faction` Tables!" );
         sObjectMgr->LoadReputationSpilloverTemplate();
-        handler->SendGlobalGMSysMessage("DB table `reputation_spillover_template` reloaded.");
+        handler->SendGlobalGMSysMessage("DB tables `reputation_spillover_template` and `reputation_spillover_faction` reloaded.");
         return true;
     }
 
