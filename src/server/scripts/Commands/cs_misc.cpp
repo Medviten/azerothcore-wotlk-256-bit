@@ -2407,6 +2407,36 @@ public:
             case RACE_DRAENEI:
                 raceStr = "Draenei";
                 break;
+            case RACE_GOBLIN:
+                raceStr = "Goblin";
+                break;
+            case RACE_WORGEN:
+                raceStr = "Worgen";
+                break;
+            case RACE_HIGHELF:
+                raceStr = "High Elf";
+                break;
+            case RACE_MAGHARORC:
+                raceStr = "Mag'har Orc";
+                break;
+            case RACE_OGRE:
+                raceStr = "Ogre";
+                break;
+            case RACE_DARKIRONDWARF:
+                raceStr = "Dark Iron Dwarf";
+                break;
+            case RACE_ZANDALARITROLL:
+                raceStr = "Zandalari Troll";
+                break;
+            case RACE_VULPERA:
+                raceStr = "Vulpera";
+                break;
+            case RACE_ALLIANCEPANDAREN:
+                raceStr = "Pandaren";
+                break;
+            case RACE_HORDEPANDAREN:
+                raceStr = "Pandaren";
+                break;
         }
 
         switch (classid)
