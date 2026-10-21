@@ -31,6 +31,7 @@ uint16 RaceMgr::_maxRaces = 0;
 RaceMask RaceMgr::_playableRaceMask;
 RaceMask RaceMgr::_allianceRaceMask;
 RaceMask RaceMgr::_hordeRaceMask;
+RaceMask RaceMgr::_maleOnlyRaceMask;
 
 RaceMgr::RaceMgr()
 {
@@ -52,6 +53,7 @@ void RaceMgr::LoadRaces()
     _playableRaceMask = RaceMask();
     _hordeRaceMask    = RaceMask();
     _allianceRaceMask = RaceMask();
+    _maleOnlyRaceMask = RaceMask();
 
     for (auto const& raceEntry : sChrRacesStore)
     {
@@ -75,6 +77,12 @@ void RaceMgr::LoadRaces()
             _hordeRaceMask |= raceBit;
         else if (alliance == ALLIANCE_ALLIANCE)
             _allianceRaceMask |= raceBit;
+
+        // no female model: the female display shows the male model
+        CreatureDisplayInfoEntry const* maleDisplay = sCreatureDisplayInfoStore.LookupEntry(raceEntry->model_m);
+        CreatureDisplayInfoEntry const* femaleDisplay = sCreatureDisplayInfoStore.LookupEntry(raceEntry->model_f);
+        if (maleDisplay && femaleDisplay && maleDisplay->ModelId == femaleDisplay->ModelId)
+            _maleOnlyRaceMask |= raceBit;
     }
 }
 

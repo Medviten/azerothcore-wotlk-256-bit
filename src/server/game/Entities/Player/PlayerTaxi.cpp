@@ -72,6 +72,7 @@ void PlayerTaxi::InitTaxiNodesForLevel(uint32 race, uint32 chrClass, uint8 level
         case RACE_UNDEAD_PLAYER:
         case RACE_SKELETON:
         case RACE_NORTHRENDSKELETON:
+        case RACE_DARKFALLEN:
             SetTaximaskNode(11);
             break;// Undead
         case RACE_TAUREN:

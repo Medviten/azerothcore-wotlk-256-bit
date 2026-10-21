@@ -43,6 +43,10 @@ public:
     static RaceMask const& GetAllianceRaceMask() { return _allianceRaceMask; }
     static RaceMask const& GetHordeRaceMask() { return _hordeRaceMask; }
 
+    /// Races without a female model: ChrRaces gives them a female display that uses the male display's model.
+    /// Characters of these races are always created male.
+    static bool IsMaleOnlyRace(uint8 race) { return _maleOnlyRaceMask.HasRace(race); }
+
     /**
      * @brief Reads a race mask stored as four BIGINT columns (see RaceMask::FromWords64()).
      * @param lowIndex Column of races 1-64: the original race mask column, so SQL bitwise math on it keeps working.
@@ -58,6 +62,7 @@ private:
     static RaceMask _playableRaceMask;
     static RaceMask _allianceRaceMask;
     static RaceMask _hordeRaceMask;
+    static RaceMask _maleOnlyRaceMask;
 };
 
 #define sRaceMgr RaceMgr::instance()

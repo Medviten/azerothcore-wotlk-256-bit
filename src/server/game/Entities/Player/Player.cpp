@@ -67,6 +67,7 @@
 #include "PetitionMgr.h"
 #include "QuestDef.h"
 #include "RBAC.h"
+#include "RaceMgr.h"
 #include "Realm.h"
 #include "ReputationMgr.h"
 #include "ScriptMgr.h"
@@ -532,6 +533,10 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
         return false;
     }
 
+    // races without a female model are always created male (bots pick a random gender too)
+    if (createInfo->Gender == GENDER_FEMALE && sRaceMgr->IsMaleOnlyRace(createInfo->Race))
+        createInfo->Gender = GENDER_MALE;
+
     uint32 RaceClassGender = (createInfo->Race) | (createInfo->Class << 8) | (createInfo->Gender << 16);
 
     SetUInt32Value(UNIT_FIELD_BYTES_0, (RaceClassGender | (powertype << 24)));
@@ -718,6 +723,7 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
                 case RACE_UNDEAD_PLAYER:
                 case RACE_SKELETON:
                 case RACE_NORTHRENDSKELETON:
+                case RACE_DARKFALLEN:
                     voucherId = 14651; break; // Brill Gift Voucher
                 case RACE_BLOODELF:
                 case RACE_NAGA:
@@ -10846,23 +10852,32 @@ void Player::InitDataForForm(bool reapplyMods)
 
 void Player::InitDisplayIds()
 {
+    // The displays come from ChrRaces either way; reading them from there when the race/class pair has no
+    // playercreateinfo (e.g. a modpak's start data was removed) keeps the character from having display 0, which
+    // the collision code cannot handle.
     PlayerInfo const* info = sObjectMgr->GetPlayerInfo(getRace(true), getClass());
+    ChrRacesEntry const* raceEntry = sChrRacesStore.LookupEntry(getRace(true));
     if (!info)
     {
-        LOG_ERROR("entities.player", "Player {} has incorrect race/class pair. Can't init display ids.", GetGUID().ToString());
-        return;
+        LOG_ERROR("entities.player", "Player {} has incorrect race/class pair.{}", GetGUID().ToString(),
+            raceEntry ? " Using the ChrRaces displays." : " Can't init display ids.");
+        if (!raceEntry)
+            return;
     }
+
+    uint32 const displayMale = info ? info->displayId_m : raceEntry->model_m;
+    uint32 const displayFemale = info ? info->displayId_f : raceEntry->model_f;
 
     uint8 gender = getGender();
     switch (gender)
     {
         case GENDER_FEMALE:
-            SetDisplayId(info->displayId_f);
-            SetNativeDisplayId(info->displayId_f);
+            SetDisplayId(displayFemale);
+            SetNativeDisplayId(displayFemale);
             break;
         case GENDER_MALE:
-            SetDisplayId(info->displayId_m);
-            SetNativeDisplayId(info->displayId_m);
+            SetDisplayId(displayMale);
+            SetNativeDisplayId(displayMale);
             break;
         default:
             LOG_ERROR("entities.player", "Invalid gender {} for player", gender);

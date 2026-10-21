@@ -2418,6 +2418,7 @@ void WorldSession::HandleCharFactionOrRaceChangeCallback(std::shared_ptr<Charact
         case RACE_NIGHTBORNE:
         case RACE_VOIDELF:
         case RACE_HIGHELF:
+        case RACE_DARKFALLEN:
             raceLanguage = 137;
             break;
         }
