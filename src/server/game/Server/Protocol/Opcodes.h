@@ -1340,7 +1340,11 @@ enum Opcodes : uint16
     SMSG_MULTIPLE_MOVES                             = 0x51E, // uncompressed version of SMSG_COMPRESSED_MOVES
     TC9_CMSG_PREPARE_FOR_REDIRECT                   = 0x51F,
     TC9_SMSG_READY_FOR_REDIRECT                     = 0x520,
-    NUM_MSG_TYPES                                   = 0x521
+    // Retail race looks of the wowdecomp-256-bit client (src/server/shared/RetailLookWire.h); 0x521-0x523 are unused
+    SMSG_RETAIL_LOOK                                = 0x524, // guid(8) + look payload, for every player in view
+    CMSG_RETAIL_FORM_LOOK                           = 0x525, // Two Forms: both forms' looks of a character
+    SMSG_RETAIL_FORM_LOOK_ACK                       = 0x526, // guid(8) + revision(4) + result(1)
+    NUM_MSG_TYPES                                   = 0x527
 };
 
 enum OpcodeMisc : uint16

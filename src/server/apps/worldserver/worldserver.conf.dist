@@ -2040,6 +2040,15 @@ CharactersPerAccount = 50
 CharactersPerRealm = 10
 
 #
+#    RetailLook.TwoFormsRaces
+#        Description: Races with Two Forms in the wowdecomp-256-bit client's Retail models, as "race=first form"
+#                     pairs: 1 for Worgen forms (Wolf/Human), 3 for Dracthyr forms (Dragon/Visage). The client
+#                     commits both forms' looks of such a character; other races are refused.
+#        Default:     "22=1,52=3,70=3" - (Worgen, Alliance Dracthyr, Horde Dracthyr)
+
+RetailLook.TwoFormsRaces = "22=1,52=3,70=3"
+
+#
 #    HeroicCharactersPerRealm
 #        Description: Limit number of heroic class characters per account on this realm.
 #        Range:       1-255

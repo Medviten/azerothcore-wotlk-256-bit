@@ -16,13 +16,17 @@
  */
 
 #include "AccountMgr.h"
+#include "Config.h"
 #include "GameTime.h"
 #include "InstancePackets.h"
 #include "MapMgr.h"
 #include "Player.h"
 #include "RBAC.h"
 #include "ScriptMgr.h"
+#include "StringConvert.h"
+#include "Tokenize.h"
 #include "WorldSession.h"
+#include <unordered_map>
 
 /*********************************************************/
 /***               FLOOD FILTER SYSTEM                 ***/
@@ -124,6 +128,28 @@ void Player::Customize(CharacterCustomizeInfo const* customizeInfo, CharacterDat
     stmt->SetData(5, customizeInfo->FacialHair);
     stmt->SetData(6, customizeInfo->Guid.GetCounter());
 
+    CharacterDatabase.ExecuteOrAppend(trans, stmt);
+
+    // A customize, faction or race change can change the model's options, so the parked Two Forms look is stale.
+    // The active look is replaced by the one sent with the change; without one (a client that does not map the race to
+    // a Retail model) it is dropped, so the five appearance bytes above are what everyone sees.
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_FORM_LOOK);
+    stmt->SetData(0, customizeInfo->Guid.GetCounter());
+    CharacterDatabase.ExecuteOrAppend(trans, stmt);
+
+    if (customizeInfo->HasRetailLook)
+    {
+        std::vector<uint8> payload(CharacterRetailLook::PayloadSize);
+        CharacterRetailLook::WritePayload(payload.data(), customizeInfo->RetailLook);
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_RETAIL_LOOK);
+        stmt->SetData(0, customizeInfo->Guid.GetCounter());
+        stmt->SetData(1, payload);
+    }
+    else
+    {
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_RETAIL_LOOK);
+        stmt->SetData(0, customizeInfo->Guid.GetCounter());
+    }
     CharacterDatabase.ExecuteOrAppend(trans, stmt);
 }
 
@@ -520,4 +546,120 @@ void Player::SendItemRetrievalMail(Item* item)
         .AddItem(item)
         .SendMailTo(trans, MailReceiver(this, GetGUID().GetCounter()), MailSender(MAIL_CREATURE, 34337 /* The Postmaster */));
     CharacterDatabase.CommitTransaction(trans);
+}
+
+uint8 Player::GetRetailFormBase(uint8 race)
+{
+    // "race=first form" pairs; the client's retailRaces setting decides which races show Retail models at all
+    static std::unordered_map<uint8, uint8> const bases = []
+    {
+        std::unordered_map<uint8, uint8> map;
+        std::string const races = sConfigMgr->GetOption<std::string>("RetailLook.TwoFormsRaces", "22=1,52=3,70=3");
+        for (std::string_view pair : Acore::Tokenize(races, ',', false))
+        {
+            std::vector<std::string_view> parts = Acore::Tokenize(pair, '=', false);
+            Optional<uint8> raceId = parts.size() == 2 ? Acore::StringTo<uint8>(parts[0]) : std::nullopt;
+            Optional<uint8> form = parts.size() == 2 ? Acore::StringTo<uint8>(parts[1]) : std::nullopt;
+            if (raceId && form && (*form == 1 || *form == 3))
+                map[*raceId] = *form;
+            else
+                LOG_ERROR("server.loading", "RetailLook.TwoFormsRaces: ignoring '{}' "
+                    "(race=1 for Worgen forms, race=3 for Dracthyr forms)", pair);
+        }
+        return map;
+    }();
+
+    auto const itr = bases.find(race);
+    return itr != bases.end() ? itr->second : 0;
+}
+
+void Player::LoadRetailLook(PreparedQueryResult result)
+{
+    _hasRetailLook = false;
+    _retailLook = {};
+    if (!result)
+        return;
+
+    auto const payload = (*result)[0].Get<Binary, CharacterRetailLook::PayloadSize>();
+    CharacterRetailLook::Look look;
+    if (CharacterRetailLook::ReadPayload(payload.data(), payload.size(), look))
+    {
+        _retailLook = payload;
+        _hasRetailLook = true;
+    }
+}
+
+void Player::LoadFormLook(PreparedQueryResult result)
+{
+    _hasParkedLook = false;
+    _parkedLook = {};
+    if (!result)
+        return;
+
+    auto const payload = (*result)[0].Get<Binary, CharacterRetailLook::PayloadSize>();
+    CharacterRetailLook::Look look;
+    if (CharacterRetailLook::ReadPayload(payload.data(), payload.size(), look))
+    {
+        _parkedLook = payload;
+        _hasParkedLook = true;
+    }
+}
+
+void Player::SendRetailLookTo(Player* receiver) const
+{
+    // Players without a saved look have nothing to send: the client falls back to the five appearance bytes
+    if (!_hasRetailLook || !receiver || !receiver->GetSession())
+        return;
+
+    WorldPacket data(SMSG_RETAIL_LOOK, 8 + CharacterRetailLook::PayloadSize);
+    data << GetGUID().GetRawValue();
+    data.append(_retailLook.data(), _retailLook.size());
+    receiver->GetSession()->SendPacket(&data);
+}
+
+uint8 Player::GetActiveRetailForm() const
+{
+    CharacterRetailLook::Look look;
+    if (!_hasRetailLook || !CharacterRetailLook::ReadPayload(_retailLook.data(), _retailLook.size(), look))
+        return 0;
+    return look.form;
+}
+
+bool Player::ToggleRetailForm()
+{
+    uint8 const first = GetRetailFormBase(getRace());
+    if (!first || !_hasRetailLook || !_hasParkedLook)
+        return false;
+
+    CharacterRetailLook::Look active, parked;
+    if (!CharacterRetailLook::ReadPayload(_retailLook.data(), _retailLook.size(), active)
+        || !CharacterRetailLook::ReadPayload(_parkedLook.data(), _parkedLook.size(), parked))
+        return false;
+
+    uint8 const second = static_cast<uint8>(first + 1);
+    bool const formsMatch = (active.form == first && parked.form == second)
+        || (active.form == second && parked.form == first);
+    if (!formsMatch || active.race != getRace() || parked.race != getRace()
+        || active.sex != getGender() || parked.sex != getGender())
+        return false;
+
+    std::swap(_retailLook, _parkedLook);
+
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_RETAIL_LOOK);
+    stmt->SetData(0, GetGUID().GetCounter());
+    stmt->SetData(1, std::vector<uint8>(_retailLook.begin(), _retailLook.end()));
+    trans->Append(stmt);
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_FORM_LOOK);
+    stmt->SetData(0, GetGUID().GetCounter());
+    stmt->SetData(1, std::vector<uint8>(_parkedLook.begin(), _parkedLook.end()));
+    trans->Append(stmt);
+    CharacterDatabase.CommitTransaction(trans);
+
+    // To this player and everyone who has them in view; players who come into view later get it from SendRetailLookTo
+    WorldPacket data(SMSG_RETAIL_LOOK, 8 + CharacterRetailLook::PayloadSize);
+    data << GetGUID().GetRawValue();
+    data.append(_retailLook.data(), _retailLook.size());
+    SendMessageToSet(&data, true);
+    return true;
 }

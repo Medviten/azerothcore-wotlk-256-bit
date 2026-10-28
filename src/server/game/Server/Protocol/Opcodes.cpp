@@ -1441,6 +1441,9 @@ void OpcodeTable::Initialize()
     /*0x51E*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_MULTIPLE_MOVES, STATUS_NEVER);
     /*0x51F*/ DEFINE_HANDLER(TC9_CMSG_PREPARE_FOR_REDIRECT,                                         STATUS_AUTHED,     PROCESS_THREADUNSAFE,   &WorldSession::HandleTC9PrepareForRedirect);
     /*0x520*/ DEFINE_SERVER_OPCODE_HANDLER(TC9_SMSG_READY_FOR_REDIRECT, STATUS_NEVER);
+    /*0x524*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_RETAIL_LOOK,                                        STATUS_NEVER);
+    /*0x525*/ DEFINE_HANDLER(CMSG_RETAIL_FORM_LOOK,                                                 STATUS_AUTHED,     PROCESS_THREADUNSAFE,   &WorldSession::HandleRetailFormLookOpcode               );
+    /*0x526*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_RETAIL_FORM_LOOK_ACK,                               STATUS_NEVER);
 
 #undef DEFINE_HANDLER
 #undef DEFINE_SERVER_OPCODE_HANDLER

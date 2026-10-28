@@ -889,6 +889,8 @@ enum PlayerLoginQueryIndex
     PLAYER_LOGIN_QUERY_LOAD_CHARACTER_SETTINGS           = 36,
     PLAYER_LOGIN_QUERY_LOAD_PET_SLOTS                    = 37,
     PLAYER_LOGIN_QUERY_LOAD_OFFLINE_ACHIEVEMENTS_UPDATES = 38,
+    PLAYER_LOGIN_QUERY_LOAD_RETAIL_LOOK                  = 39,
+    PLAYER_LOGIN_QUERY_LOAD_FORM_LOOK                    = 40,
     MAX_PLAYER_LOGIN_QUERY
 };
 
@@ -1607,6 +1609,20 @@ public:
     void _SaveSkills(CharacterDatabaseTransaction trans);
 
     static void Customize(CharacterCustomizeInfo const* customizeInfo, CharacterDatabaseTransaction trans);
+
+    // Full Retail customization of a race the wowdecomp-256-bit client maps to a Retail model (RetailLookWire.h):
+    // opaque to the server, passed on to every player who sees this one
+    void LoadRetailLook(PreparedQueryResult result);
+    void LoadFormLook(PreparedQueryResult result);
+    void SendRetailLookTo(Player* receiver) const;
+    // Two Forms (Worgen Wolf/Human, Dracthyr Dragon/Visage): the form (RetailLookWire.h) of the look showing, 0 when
+    // none is saved or it is the race's default model
+    uint8 GetActiveRetailForm() const;
+    // Swaps the active look with the parked one of the other form, saves both and tells everyone who sees this
+    // player; false when the character has no saved pair
+    bool ToggleRetailForm();
+    // The first of a Two Forms race's two forms (1 Wolf, 3 Dragon), 0 for other races (RetailLook.TwoFormsRaces)
+    static uint8 GetRetailFormBase(uint8 race);
     static void SavePositionInDB(uint32 mapid, float x, float y, float z, float o, uint32 zone, ObjectGuid guid);
     static void SavePositionInDB(WorldLocation const& loc, uint16 zoneId, ObjectGuid guid, CharacterDatabaseTransaction trans);
 
@@ -3076,6 +3092,12 @@ private:
     bool _wasOutdoor;
 
     PlayerSettingMap m_charSettingsMap;
+
+    // Saved Retail looks (see LoadRetailLook): the active one and the Two Forms one that is not showing
+    bool _hasRetailLook = false;
+    std::array<uint8, CharacterRetailLook::PayloadSize> _retailLook{};
+    bool _hasParkedLook = false;
+    std::array<uint8, CharacterRetailLook::PayloadSize> _parkedLook{};
 
     Seconds m_creationTime;
 

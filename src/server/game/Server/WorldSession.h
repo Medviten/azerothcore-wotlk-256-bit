@@ -31,6 +31,7 @@
 #include "Duration.h"
 #include "GossipDef.h"
 #include "QueryHolder.h"
+#include "RetailLookWire.h"
 #include "Packet.h"
 #include "SharedDefines.h"
 #include "World.h"
@@ -382,6 +383,10 @@ protected:
     uint8 FacialHair = 0;
     uint8 OutfitId = 0;
 
+    // Full Retail customization of a race mapped to a Retail model by the wowdecomp-256-bit client (RLK1 footer)
+    bool HasRetailLook = false;
+    CharacterRetailLook::Look RetailLook;
+
     /// Server side data
     uint8 CharCount = 0;
 };
@@ -407,6 +412,10 @@ protected:
     uint8 HairStyle = 0;
     uint8 HairColor = 0;
     uint8 FacialHair = 0;
+
+    // Full Retail customization (RLK1 footer), also sent with faction and race changes
+    bool HasRetailLook = false;
+    CharacterRetailLook::Look RetailLook;
 };
 
 struct CharacterFactionChangeInfo : public CharacterCustomizeInfo
@@ -696,7 +705,8 @@ public:                                                 // opcodes handlers
     void HandleCharDeleteOpcode(WorldPacket& recvPacket);
     void HandleCharCreateOpcode(WorldPacket& recvPacket);
     void HandlePlayerLoginOpcode(WorldPacket& recvPacket);
-    void HandleCharEnum(PreparedQueryResult result);
+    void HandleCharEnum(PreparedQueryResult result, PreparedQueryResult retailLooks);
+    void HandleRetailFormLookOpcode(WorldPacket& recvData);
     void HandlePlayerLoginFromDB(LoginQueryHolder const& holder);
     void HandlePlayerLoginToCharInWorld(Player* pCurrChar);
     void HandlePlayerLoginToCharOutOfWorld(Player* pCurrChar);

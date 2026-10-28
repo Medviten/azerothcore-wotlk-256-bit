@@ -1690,6 +1690,7 @@ inline void UpdateVisibilityOf_helper(Player* player, Player* target,
 {
     player->GetObjectVisibilityContainer().LinkWorldObjectVisibility(target);
     v.push_back(target);
+    target->SendRetailLookTo(player);
 }
 
 template <class T>
@@ -1760,6 +1761,9 @@ void Player::UpdateVisibilityOf(WorldObject* target)
         {
             target->SendUpdateToPlayer(this);
             GetObjectVisibilityContainer().LinkWorldObjectVisibility(target);
+
+            if (Player* other = target->ToPlayer())
+                other->SendRetailLookTo(this);
 
             // target aura duration for caster show only if target exist at
             // caster client send data at target visibility change (adding to

@@ -213,14 +213,43 @@ bool LoginQueryHolder::Initialize()
     stmt->SetData(0, rawGUID);
     res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_OFFLINE_ACHIEVEMENTS_UPDATES, stmt);
 
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_RETAIL_LOOK);
+    stmt->SetData(0, rawGUID);
+    res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_RETAIL_LOOK, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_FORM_LOOK);
+    stmt->SetData(0, rawGUID);
+    res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_FORM_LOOK, stmt);
+
     return res;
 }
 
-void WorldSession::HandleCharEnum(PreparedQueryResult result)
+void WorldSession::HandleCharEnum(PreparedQueryResult result, PreparedQueryResult retailLooks)
 {
+    // Saved Retail looks by character: the look showing, and the Two Forms look that is not (opaque to the server,
+    // only structurally checked)
+    std::unordered_map<uint32, std::array<uint8, CharacterRetailLook::PayloadSize>> activeLooks;
+    std::unordered_map<uint32, std::array<uint8, CharacterRetailLook::PayloadSize>> parkedLooks;
+    if (retailLooks)
+    {
+        do
+        {
+            auto const payload = (*retailLooks)[1].Get<Binary, CharacterRetailLook::PayloadSize>();
+            CharacterRetailLook::Look look;
+            if (!CharacterRetailLook::ReadPayload(payload.data(), payload.size(), look))
+                continue;
+            auto& looks = (*retailLooks)[2].Get<uint64>() ? parkedLooks : activeLooks;
+            looks[(*retailLooks)[0].Get<uint32>()] = payload;
+        } while (retailLooks->NextRow());
+    }
+
     WorldPacket data(SMSG_CHAR_ENUM, 100);                  // we guess size
 
     uint8 num = 0;
+    ByteBuffer activeLookBlock;
+    uint32 activeLookCount = 0;
+    ByteBuffer parkedLookBlock;
+    uint32 parkedLookCount = 0;
 
     data << num;
 
@@ -235,11 +264,37 @@ void WorldSession::HandleCharEnum(PreparedQueryResult result)
             {
                 _legitCharacters.insert(guid);
                 ++num;
+
+                if (auto const look = activeLooks.find(guid.GetCounter()); look != activeLooks.end())
+                {
+                    activeLookBlock << guid.GetRawValue();
+                    activeLookBlock.append(look->second.data(), look->second.size());
+                    ++activeLookCount;
+                }
+
+                if (auto const look = parkedLooks.find(guid.GetCounter()); look != parkedLooks.end())
+                {
+                    parkedLookBlock << guid.GetRawValue();
+                    parkedLookBlock.append(look->second.data(), look->second.size());
+                    ++parkedLookCount;
+                }
             }
         } while (result->NextRow());
     }
 
     data.put<uint8>(0, num);
+
+    // Tail blocks the wowdecomp-256-bit client strips before parsing the list (a stock client ignores trailing data):
+    // per character guid + look, then the count and the magic. RLE1 is always sent, empty when no character has a
+    // look: it tells the client this server takes CMSG_RETAIL_FORM_LOOK.
+    data.append(activeLookBlock);
+    data << activeLookCount << CharacterRetailLook::EnumMagic;
+
+    if (parkedLookCount)
+    {
+        data.append(parkedLookBlock);
+        data << parkedLookCount << CharacterRetailLook::ParkedMagic;
+    }
 
     SendPacket(&data);
 }
@@ -258,7 +313,19 @@ void WorldSession::HandleCharEnumOpcode(WorldPacket& /*recvData*/)
     stmt->SetData(0, PET_SAVE_AS_CURRENT);
     stmt->SetData(1, GetAccountId());
 
-    _queryProcessor.AddCallback(CharacterDatabase.AsyncQuery(stmt).WithPreparedCallback(std::bind(&WorldSession::HandleCharEnum, this, std::placeholders::_1)));
+    _queryProcessor.AddCallback(CharacterDatabase.AsyncQuery(stmt).WithChainingPreparedCallback(
+        [this](QueryCallback& callback, PreparedQueryResult result)
+        {
+            CharacterDatabasePreparedStatement* lookStmt =
+                CharacterDatabase.GetPreparedStatement(CHAR_SEL_ENUM_RETAIL_LOOK);
+            lookStmt->SetData(0, GetAccountId());
+            lookStmt->SetData(1, GetAccountId());
+            callback.WithPreparedCallback([this, result](PreparedQueryResult retailLooks)
+            {
+                HandleCharEnum(result, retailLooks);
+            });
+            callback.SetNextQuery(CharacterDatabase.AsyncQuery(lookStmt));
+        }));
 }
 
 void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
@@ -275,6 +342,15 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
              >> createInfo->HairColor
              >> createInfo->FacialHair
              >> createInfo->OutfitId;
+
+    // Full Retail customization of a race the client maps to a Retail model (RLK1 footer at the end of the packet)
+    if (!CharacterRetailLook::ReadTail(recvData, createInfo->HasRetailLook, createInfo->RetailLook)
+        || (createInfo->HasRetailLook && (createInfo->RetailLook.race != createInfo->Race
+            || createInfo->RetailLook.sex != createInfo->Gender)))
+    {
+        SendCharCreate(CHAR_CREATE_FAILED);
+        return;
+    }
 
     if (!HasPermission(rbac::RBAC_PERM_SKIP_CHECK_CHARACTER_CREATION_TEAMMASK))
     {
@@ -574,6 +650,17 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
             // Player created, save it now
             newChar->SaveToDB(characterTransaction, true, false);
             createInfo->CharCount++;
+
+            if (createInfo->HasRetailLook)
+            {
+                std::vector<uint8> payload(CharacterRetailLook::PayloadSize);
+                CharacterRetailLook::WritePayload(payload.data(), createInfo->RetailLook);
+                CharacterDatabasePreparedStatement* lookStmt =
+                    CharacterDatabase.GetPreparedStatement(CHAR_REP_RETAIL_LOOK);
+                lookStmt->SetData(0, newChar->GetGUID().GetCounter());
+                lookStmt->SetData(1, payload);
+                characterTransaction->Append(lookStmt);
+            }
 
             LoginDatabasePreparedStatement* stmt = LoginDatabase.GetPreparedStatement(LOGIN_REP_REALM_CHARACTERS);
             stmt->SetData(0, createInfo->CharCount);
@@ -1668,6 +1755,14 @@ void WorldSession::HandleCharCustomize(WorldPacket& recvData)
              >> customizeInfo->FacialHair
              >> customizeInfo->Face;
 
+    // Full Retail customization (RLK1 footer), saved by Player::Customize
+    if (!CharacterRetailLook::ReadTail(recvData, customizeInfo->HasRetailLook, customizeInfo->RetailLook)
+        || (customizeInfo->HasRetailLook && customizeInfo->RetailLook.sex != customizeInfo->Gender))
+    {
+        SendCharCustomize(CHAR_CREATE_ERROR, customizeInfo.get());
+        return;
+    }
+
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHAR_CUSTOMIZE_INFO);
     stmt->SetData(0, customizeInfo->Guid.GetCounter());
 
@@ -1943,6 +2038,88 @@ void WorldSession::HandleEquipmentSetUse(WorldPacket& recvData)
     SendPacket(&data);
 }
 
+// Two Forms: the wowdecomp-256-bit client commits both forms of a Worgen or Dracthyr after creating it.
+//   CMSG_RETAIL_FORM_LOOK: guid(8) revision(u32) activeForm(u8) look(132) look(132). The first look is the active
+//         form's, the second the other form's; both are version-2 looks (RetailLookWire.h).
+//   SMSG_RETAIL_FORM_LOOK_ACK: guid(8) revision(u32) result(u8): 0 saved, 1 not this account's character, 2 invalid,
+//         3 not a Two Forms race. The write is a plain REPLACE, so a resend of the same commit is harmless.
+void WorldSession::HandleRetailFormLookOpcode(WorldPacket& recvData)
+{
+    constexpr size_t payloadSize = CharacterRetailLook::PayloadSize;
+    if (recvData.size() - recvData.rpos() != 8 + 4 + 1 + 2 * payloadSize)
+    {
+        recvData.rfinish();
+        return;
+    }
+
+    uint64 rawGuid;
+    uint32 revision;
+    uint8 activeForm;
+    std::array<uint8, payloadSize> activePayload, parkedPayload;
+    recvData >> rawGuid >> revision >> activeForm;
+    recvData.read(activePayload.data(), payloadSize);
+    recvData.read(parkedPayload.data(), payloadSize);
+
+    ObjectGuid const guid(rawGuid);
+    auto reply = [&](uint8 result)
+    {
+        if (result)
+            LOG_WARN("network.opcode", "CMSG_RETAIL_FORM_LOOK from account {} refused with result {}",
+                GetAccountId(), result);
+        WorldPacket data(SMSG_RETAIL_FORM_LOOK_ACK, 8 + 4 + 1);
+        data << rawGuid << revision << result;
+        SendPacket(&data);
+    };
+
+    CharacterCacheEntry const* character = nullptr;
+    if (IsLegitCharacterForAccount(guid))
+        character = sCharacterCache->GetCharacterCacheByGuid(guid);
+    if (!character)
+    {
+        reply(1);
+        return;
+    }
+
+    // The two forms of each Two Forms race: Worgen Wolf (1) and Human (2), Dracthyr Dragon (3) and Visage (4)
+    uint8 const first = Player::GetRetailFormBase(character->Race);
+    if (!first)
+    {
+        reply(3);
+        return;
+    }
+    uint8 const second = static_cast<uint8>(first + 1);
+
+    CharacterRetailLook::Look active, parked;
+    if (!CharacterRetailLook::ReadPayload(activePayload.data(), payloadSize, active)
+        || !CharacterRetailLook::ReadPayload(parkedPayload.data(), payloadSize, parked)
+        || (activeForm != first && activeForm != second)
+        || active.form != activeForm || parked.form != (activeForm == first ? second : first)
+        || active.race != character->Race || parked.race != character->Race
+        || active.sex != character->Sex || parked.sex != character->Sex)
+    {
+        reply(2);
+        return;
+    }
+
+    // Written from the parsed looks, so what is stored is always the canonical encoding
+    std::vector<uint8> activeOut(payloadSize), parkedOut(payloadSize);
+    CharacterRetailLook::WritePayload(activeOut.data(), active);
+    CharacterRetailLook::WritePayload(parkedOut.data(), parked);
+
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_RETAIL_LOOK);
+    stmt->SetData(0, guid.GetCounter());
+    stmt->SetData(1, activeOut);
+    trans->Append(stmt);
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_FORM_LOOK);
+    stmt->SetData(0, guid.GetCounter());
+    stmt->SetData(1, parkedOut);
+    trans->Append(stmt);
+    CharacterDatabase.CommitTransaction(trans);
+
+    reply(0);
+}
+
 void WorldSession::HandleCharFactionOrRaceChange(WorldPacket& recvData)
 {
     std::shared_ptr<CharacterFactionChangeInfo> factionChangeInfo = std::make_shared<CharacterFactionChangeInfo>();
@@ -1966,6 +2143,15 @@ void WorldSession::HandleCharFactionOrRaceChange(WorldPacket& recvData)
              >> factionChangeInfo->FacialHair
              >> factionChangeInfo->Face
              >> factionChangeInfo->Race;
+
+    // Full Retail customization of the new race (RLK1 footer), saved by Player::Customize
+    if (!CharacterRetailLook::ReadTail(recvData, factionChangeInfo->HasRetailLook, factionChangeInfo->RetailLook)
+        || (factionChangeInfo->HasRetailLook && (factionChangeInfo->RetailLook.race != factionChangeInfo->Race
+            || factionChangeInfo->RetailLook.sex != factionChangeInfo->Gender)))
+    {
+        SendCharFactionChange(CHAR_CREATE_ERROR, factionChangeInfo.get());
+        return;
+    }
 
     // pussywizard:
     if (ObjectAccessor::FindConnectedPlayer(factionChangeInfo->Guid) || sWorldSessionMgr->FindOfflineSessionForCharacterGUID(factionChangeInfo->Guid.GetCounter()))

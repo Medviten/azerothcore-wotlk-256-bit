@@ -643,6 +643,21 @@ void CharacterDatabaseConnection::DoPrepareStatements()
     PrepareStatement(CHAR_SEL_WORLD_STATE, "SELECT Id, Data FROM world_state", CONNECTION_SYNCH);
     PrepareStatement(CHAR_REP_WORLD_STATE, "REPLACE INTO world_state (Id, Data) VALUES(?, ?)", CONNECTION_ASYNC);
 
+    // Retail race looks (RetailLookWire.h): the look showing, and the Two Forms look that is not (1 in the enum)
+    PrepareStatement(CHAR_SEL_ENUM_RETAIL_LOOK,
+        "SELECT l.guid, l.data, 0 FROM character_retail_look AS l JOIN characters AS c ON c.guid = l.guid "
+        "WHERE c.account = ? AND c.deleteInfos_Name IS NULL "
+        "UNION ALL SELECT f.guid, f.data, 1 FROM character_form_look AS f JOIN characters AS c ON c.guid = f.guid "
+        "WHERE c.account = ? AND c.deleteInfos_Name IS NULL", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_SEL_RETAIL_LOOK, "SELECT data FROM character_retail_look WHERE guid = ?", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_REP_RETAIL_LOOK, "REPLACE INTO character_retail_look (guid, data) VALUES (?, ?)",
+        CONNECTION_ASYNC);
+    PrepareStatement(CHAR_DEL_RETAIL_LOOK, "DELETE FROM character_retail_look WHERE guid = ?", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_SEL_FORM_LOOK, "SELECT data FROM character_form_look WHERE guid = ?", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_REP_FORM_LOOK, "REPLACE INTO character_form_look (guid, data) VALUES (?, ?)",
+        CONNECTION_ASYNC);
+    PrepareStatement(CHAR_DEL_FORM_LOOK, "DELETE FROM character_form_look WHERE guid = ?", CONNECTION_ASYNC);
+
     // CHAR_NO_OP_PROVIDE_REALM_CONTEXT is a no-op query that accepts a single parameter: the realm ID.
     // This query is used specifically in cross-realm scenarios when the database transaction
     // lacks sufficient context to determine which realm's database the query should target.
