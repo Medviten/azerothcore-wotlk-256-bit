@@ -78,7 +78,7 @@ enum Races
     RACE_TROLL              = 8,  // TITLE Troll
     // Custom: every playable race any modpak may add, at its fixed id. Retail ChrRaces ids where retail has the race;
     // the NPC races (12-21) are playable at their own ids (the NPC display races move to 160 + id, see DisplayRace);
-    // High Elf, Ogre and Darkfallen take the first ids retail leaves free. Races without ChrRaces/playercreateinfo data stay unused.
+    // High Elf, Ogre, Darkfallen and Murloc take the first ids retail leaves free. Races without ChrRaces/playercreateinfo data stay unused.
     RACE_GOBLIN             = 9,  // TITLE Goblin
     RACE_BLOODELF           = 10, // TITLE Blood Elf
     RACE_DRAENEI            = 11, // TITLE Draenei
@@ -111,6 +111,7 @@ enum Races
     RACE_HIGHELF            = 38, // TITLE High Elf
     RACE_OGRE               = 39, // TITLE Ogre
     RACE_DARKFALLEN         = 40, // TITLE Darkfallen
+    RACE_MURLOC             = 41, // TITLE Murloc
     RACE_ALLIANCEDRACTHYR   = 52, // TITLE Dracthyr
     RACE_HORDEDRACTHYR      = 70, // TITLE Dracthyr
     RACE_HORDEEARTHEN       = 84, // TITLE Earthen
@@ -163,6 +164,7 @@ enum class DisplayRace : uint8
     HighElf           = 38,
     Ogre              = 39,
     Darkfallen        = 40,
+    Murloc            = 41,
     AllianceDracthyr  = 52,
     HordeDracthyr     = 70,
     HordeEarthen      = 84,

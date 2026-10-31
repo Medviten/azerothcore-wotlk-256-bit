@@ -2323,6 +2323,7 @@ void AuraEffect::HandleAuraTransform(AuraApplication const* aurApp, uint8 mode, 
                                 case RACE_FORESTTROLL:
                                 case RACE_ICETROLL:
                                 case RACE_ZANDALARITROLL:
+                                case RACE_MURLOC:
                                     target->SetDisplayId(target->getGender() == GENDER_MALE ? 10135 : 10134);
                                     break;
                                 // Tauren
@@ -2416,6 +2417,7 @@ void AuraEffect::HandleAuraTransform(AuraApplication const* aurApp, uint8 mode, 
                                 case RACE_FORESTTROLL:
                                 case RACE_ICETROLL:
                                 case RACE_ZANDALARITROLL:
+                                case RACE_MURLOC:
                                     target->SetDisplayId(target->getGender() == GENDER_MALE ? 25041 : 25052);
                                     break;
                                 // Tauren
@@ -6834,7 +6836,17 @@ void AuraEffect::HandlePeriodicHealthLeechAuraTick(Unit* target, Unit* caster) c
 
     float gainMultiplier = GetSpellInfo()->Effects[GetEffIndex()].CalcValueMultiplier(caster);
 
-    uint32 heal = uint32(caster->SpellHealingBonusDone(caster, GetSpellInfo(), uint32(new_damage * gainMultiplier), DOT, GetEffIndex(), 0.0f, GetBase()->GetStackAmount()));
+    uint32 baseHeal = uint32(new_damage * gainMultiplier);
+    // Venthyr racial Crimson Feast (spell 111200, WHE's F-069 from Aetheria's package) heals half its damage: keep
+    // the fraction between ticks, or one-damage ticks at low level would never heal
+    if (GetId() == 111200)
+    {
+        double const exactHeal = double(new_damage) * gainMultiplier + m_leechRemainder;
+        baseHeal = uint32(exactHeal);
+        m_leechRemainder = exactHeal - baseHeal;
+    }
+
+    uint32 heal = uint32(caster->SpellHealingBonusDone(caster, GetSpellInfo(), baseHeal, DOT, GetEffIndex(), 0.0f, GetBase()->GetStackAmount()));
     heal = uint32(caster->SpellHealingBonusTaken(caster, GetSpellInfo(), heal, DOT, GetBase()->GetStackAmount()));
 
     HealInfo healInfo(caster, caster, heal, GetSpellInfo(), GetSpellInfo()->GetSchoolMask());

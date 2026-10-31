@@ -90,6 +90,7 @@ void PlayerTaxi::InitTaxiNodesForLevel(uint32 race, uint32 chrClass, uint8 level
         case RACE_FORESTTROLL:
         case RACE_ICETROLL:
         case RACE_ZANDALARITROLL:
+        case RACE_MURLOC:
             SetTaximaskNode(23);
             break;     // Troll
         case RACE_BLOODELF:

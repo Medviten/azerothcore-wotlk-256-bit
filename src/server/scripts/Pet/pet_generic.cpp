@@ -177,6 +177,7 @@ static std::unordered_map<uint8, argentPonyBanner> argentBanners = {
     {RACE_FORESTTROLL,   {2784, 63399, "Darkspear Champion's Pennant"}},
     {RACE_ICETROLL,      {2784, 63399, "Darkspear Champion's Pennant"}},
     {RACE_ZANDALARITROLL, {2784, 63399, "Darkspear Champion's Pennant"}},
+    {RACE_MURLOC,        {2784, 63399, "Darkspear Champion's Pennant"}},
     {RACE_NAGA,          {2785, 63403, "Silvermoon Champion's Pennant"}},
     {RACE_NIGHTBORNE,    {2785, 63403, "Silvermoon Champion's Pennant"}},
     {RACE_BROKEN,        {2778, 63423, "Exodar Champion's Pennant"}},

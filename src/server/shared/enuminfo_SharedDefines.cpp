@@ -72,6 +72,7 @@ AC_API_EXPORT EnumText EnumUtils<Races>::ToString(Races value)
         case RACE_HIGHELF: return { "RACE_HIGHELF", "High Elf", "" };
         case RACE_OGRE: return { "RACE_OGRE", "Ogre", "" };
         case RACE_DARKFALLEN: return { "RACE_DARKFALLEN", "Darkfallen", "" };
+        case RACE_MURLOC: return { "RACE_MURLOC", "Murloc", "" };
         case RACE_ALLIANCEDRACTHYR: return { "RACE_ALLIANCEDRACTHYR", "Dracthyr", "" };
         case RACE_HORDEDRACTHYR: return { "RACE_HORDEDRACTHYR", "Dracthyr", "" };
         case RACE_HORDEEARTHEN: return { "RACE_HORDEEARTHEN", "Earthen", "" };
@@ -81,7 +82,7 @@ AC_API_EXPORT EnumText EnumUtils<Races>::ToString(Races value)
 }
 
 template <>
-AC_API_EXPORT std::size_t EnumUtils<Races>::Count() { return 44; }
+AC_API_EXPORT std::size_t EnumUtils<Races>::Count() { return 45; }
 
 template <>
 AC_API_EXPORT Races EnumUtils<Races>::FromIndex(std::size_t index)
@@ -128,10 +129,11 @@ AC_API_EXPORT Races EnumUtils<Races>::FromIndex(std::size_t index)
         case 37: return RACE_HIGHELF;
         case 38: return RACE_OGRE;
         case 39: return RACE_DARKFALLEN;
-        case 40: return RACE_ALLIANCEDRACTHYR;
-        case 41: return RACE_HORDEDRACTHYR;
-        case 42: return RACE_HORDEEARTHEN;
-        case 43: return RACE_ALLIANCEEARTHEN;
+        case 40: return RACE_MURLOC;
+        case 41: return RACE_ALLIANCEDRACTHYR;
+        case 42: return RACE_HORDEDRACTHYR;
+        case 43: return RACE_HORDEEARTHEN;
+        case 44: return RACE_ALLIANCEEARTHEN;
         default: throw std::out_of_range("index");
     }
 }
@@ -181,10 +183,11 @@ AC_API_EXPORT std::size_t EnumUtils<Races>::ToIndex(Races value)
         case RACE_HIGHELF: return 37;
         case RACE_OGRE: return 38;
         case RACE_DARKFALLEN: return 39;
-        case RACE_ALLIANCEDRACTHYR: return 40;
-        case RACE_HORDEDRACTHYR: return 41;
-        case RACE_HORDEEARTHEN: return 42;
-        case RACE_ALLIANCEEARTHEN: return 43;
+        case RACE_MURLOC: return 40;
+        case RACE_ALLIANCEDRACTHYR: return 41;
+        case RACE_HORDEDRACTHYR: return 42;
+        case RACE_HORDEEARTHEN: return 43;
+        case RACE_ALLIANCEEARTHEN: return 44;
         default: throw std::out_of_range("value");
     }
 }

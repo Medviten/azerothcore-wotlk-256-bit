@@ -713,6 +713,7 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
                 case RACE_FORESTTROLL:
                 case RACE_ICETROLL:
                 case RACE_ZANDALARITROLL:
+                case RACE_MURLOC:
                     voucherId = 14649; break; // Razor Hill Gift Voucher
                 case RACE_TAUREN:
                 case RACE_TAUNKA:
@@ -14293,6 +14294,10 @@ void Player::HandleFall(MovementInfo const& movementInfo)
                     damage = GetMaxHealth() / 2;
 
                 if (HasAura(SPELL_DIVINE_PROTECTION))
+                    damage /= 2;
+
+                // Kyrian racial Ascended Wings (spell 111104, WHE's F-068 from Aetheria's package) halves fall damage
+                if (HasAura(111104))
                     damage /= 2;
 
                 final_damage = EnvironmentalDamage(DAMAGE_FALL, damage);
