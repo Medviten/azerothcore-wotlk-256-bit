@@ -4573,6 +4573,16 @@ AllowTwoSide.Interaction.Arena = 0
 AllowTwoSide.Interaction.Auction = 0
 
 #
+#    AllowTwoSide.EnemyTerritory
+#        Description: Faction Free: do not treat the other faction's zones as hostile territory,
+#                     so entering an enemy capital (or, on PvP realms, any enemy zone) does not
+#                     flag players for PvP.
+#        Default:     0 - (Disabled, stock behaviour)
+#                     1 - (Enabled)
+
+AllowTwoSide.EnemyTerritory = 0
+
+#
 #    TalentsInspecting
 #        Description: Allow inspecting characters from the opposing faction.
 #                     Doesn't affect characters in gamemaster mode.
