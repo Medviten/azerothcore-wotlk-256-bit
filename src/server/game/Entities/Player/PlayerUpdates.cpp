@@ -1327,16 +1327,13 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea, bool force)
     // in PvE, only opposition team capital
     switch (zone->team)
     {
-    // Faction Free (by Gitdalisar): with AllowTwoSide.EnemyTerritory, faction zones are never hostile
     case AREATEAM_ALLY:
         pvpInfo.IsInHostileArea =
-            !sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_ENEMY_TERRITORY) &&
             GetTeamId(true) != TEAM_ALLIANCE &&
             (sWorld->IsPvPRealm() || zone->flags & AREA_FLAG_CAPITAL);
         break;
     case AREATEAM_HORDE:
         pvpInfo.IsInHostileArea =
-            !sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_ENEMY_TERRITORY) &&
             GetTeamId(true) != TEAM_HORDE &&
             (sWorld->IsPvPRealm() || zone->flags & AREA_FLAG_CAPITAL);
         break;
