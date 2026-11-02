@@ -2407,6 +2407,10 @@ public:
             case RACE_DRAENEI:
                 raceStr = "Draenei";
                 break;
+            default: // races beyond the stock ones: the ChrRaces.dbc name
+                if (ChrRacesEntry const* raceEntry = sChrRacesStore.LookupEntry(raceid))
+                    raceStr = raceEntry->name[handler->GetSessionDbcLocale()];
+                break;
         }
 
         switch (classid)

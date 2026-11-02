@@ -2378,40 +2378,56 @@ void WorldSession::HandleCharFactionOrRaceChangeCallback(std::shared_ptr<Charact
 
         trans->Append(stmt);
 
-        // Race specific languages
-        if (factionChangeInfo->Race != RACE_ORC && factionChangeInfo->Race != RACE_HUMAN)
+        // Race specific languages (new races speak the language of their kin, if it has one)
+        uint32 raceLanguage = 0;
+        switch (factionChangeInfo->Race)
+        {
+        case RACE_DWARF:
+        case RACE_DARKIRONDWARF:
+            raceLanguage = 111;
+            break;
+        case RACE_DRAENEI:
+        case RACE_BROKEN:
+        case RACE_LIGHTFORGEDDRAENEI:
+            raceLanguage = 759;
+            break;
+        case RACE_GNOME:
+        case RACE_MECHAGNOME:
+            raceLanguage = 313;
+            break;
+        case RACE_NIGHTELF:
+            raceLanguage = 113;
+            break;
+        case RACE_UNDEAD_PLAYER:
+        case RACE_SKELETON:
+        case RACE_NORTHRENDSKELETON:
+            raceLanguage = 673;
+            break;
+        case RACE_TAUREN:
+        case RACE_TAUNKA:
+        case RACE_HIGHMOUNTAINTAUREN:
+            raceLanguage = 115;
+            break;
+        case RACE_TROLL:
+        case RACE_FORESTTROLL:
+        case RACE_ICETROLL:
+        case RACE_ZANDALARITROLL:
+            raceLanguage = 315;
+            break;
+        case RACE_BLOODELF:
+        case RACE_NIGHTBORNE:
+        case RACE_VOIDELF:
+        case RACE_HIGHELF:
+        case RACE_DARKFALLEN:
+            raceLanguage = 137;
+            break;
+        }
+
+        if (raceLanguage)
         {
             stmt = CharacterDatabase.GetPreparedStatement(CHAR_INS_CHAR_SKILL_LANGUAGE);
             stmt->SetData(0, lowGuid);
-
-            switch (factionChangeInfo->Race)
-            {
-            case RACE_DWARF:
-                stmt->SetData(1, 111);
-                break;
-            case RACE_DRAENEI:
-                stmt->SetData(1, 759);
-                break;
-            case RACE_GNOME:
-                stmt->SetData(1, 313);
-                break;
-            case RACE_NIGHTELF:
-                stmt->SetData(1, 113);
-                break;
-            case RACE_UNDEAD_PLAYER:
-                stmt->SetData(1, 673);
-                break;
-            case RACE_TAUREN:
-                stmt->SetData(1, 115);
-                break;
-            case RACE_TROLL:
-                stmt->SetData(1, 315);
-                break;
-            case RACE_BLOODELF:
-                stmt->SetData(1, 137);
-                break;
-            }
-
+            stmt->SetData(1, raceLanguage);
             trans->Append(stmt);
         }
 

@@ -76,6 +76,8 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <mutex>
+#include <unordered_set>
 
 float baseMoveSpeed[MAX_MOVE_TYPE] =
 {
@@ -16727,6 +16729,35 @@ bool Unit::IsThreatened() const
 }
 
 /**
+ * @brief The unit's native display and its model, or false when the DBCs lack either. Bad display data (a modpak
+ * deleting a stock model, say) is logged once per display instead of asserting: the collision callers fall back
+ * to default sizes.
+ */
+static bool GetNativeDisplayModel(Unit const* unit, CreatureDisplayInfoEntry const*& displayInfo, CreatureModelDataEntry const*& modelData)
+{
+    uint32 const displayId = unit->GetNativeDisplayId();
+    displayInfo = sCreatureDisplayInfoStore.LookupEntry(displayId);
+    modelData = displayInfo ? sCreatureModelDataStore.LookupEntry(displayInfo->ModelId) : nullptr;
+    if (modelData)
+        return true;
+
+    static std::mutex reportedLock; // maps update in parallel
+    static std::unordered_set<uint32> reported;
+    std::lock_guard<std::mutex> guard(reportedLock);
+    if (reported.insert(displayId).second)
+    {
+        if (displayInfo)
+            LOG_ERROR("entities.unit", "{} uses display {}, whose model {} is not in CreatureModelData.dbc. Using default collision sizes.",
+                unit->GetGUID().ToString(), displayId, displayInfo->ModelId);
+        else
+            LOG_ERROR("entities.unit", "{} uses display {}, which is not in CreatureDisplayInfo.dbc. Using default collision sizes.",
+                unit->GetGUID().ToString(), displayId);
+    }
+
+    return false;
+}
+
+/**
  * @brief this method gets the diameter of a Unit by DB if any value is defined, otherwise it gets the value by the DBC
  *
  * If the player is mounted the diameter also takes in consideration the mount size
@@ -16743,8 +16774,10 @@ float Unit::GetCollisionWidth() const
     float defaultSize = DEFAULT_WORLD_OBJECT_SIZE * scaleMod;
 
     //! Dismounting case - use basic default model data
-    CreatureDisplayInfoEntry const* displayInfo = sCreatureDisplayInfoStore.AssertEntry(GetNativeDisplayId());
-    CreatureModelDataEntry const* modelData = sCreatureModelDataStore.AssertEntry(displayInfo->ModelId);
+    CreatureDisplayInfoEntry const* displayInfo = nullptr;
+    CreatureModelDataEntry const* modelData = nullptr;
+    if (!GetNativeDisplayModel(this, displayInfo, modelData))
+        return objectSize;
 
     if (IsMounted())
     {
@@ -16781,8 +16814,11 @@ float Unit::GetCollisionHeight() const
     float scaleMod = GetObjectScale(); // 99% sure about this
     float defaultHeight = DEFAULT_COLLISION_HEIGHT * scaleMod;
 
-    CreatureDisplayInfoEntry const* displayInfo = sCreatureDisplayInfoStore.AssertEntry(GetNativeDisplayId());
-    CreatureModelDataEntry const* modelData = sCreatureModelDataStore.AssertEntry(displayInfo->ModelId);
+    CreatureDisplayInfoEntry const* displayInfo = nullptr;
+    CreatureModelDataEntry const* modelData = nullptr;
+    if (!GetNativeDisplayModel(this, displayInfo, modelData))
+        return defaultHeight;
+
     float collisionHeight = 0.0f;
 
     if (IsMounted())

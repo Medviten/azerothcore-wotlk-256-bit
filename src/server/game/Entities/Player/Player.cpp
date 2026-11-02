@@ -67,6 +67,7 @@
 #include "PetitionMgr.h"
 #include "QuestDef.h"
 #include "RBAC.h"
+#include "RaceMgr.h"
 #include "Realm.h"
 #include "ReputationMgr.h"
 #include "ScriptMgr.h"
@@ -532,6 +533,10 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
         return false;
     }
 
+    // races without a female model are always created male (bots pick a random gender too)
+    if (createInfo->Gender == GENDER_FEMALE && sRaceMgr->IsMaleOnlyRace(createInfo->Race))
+        createInfo->Gender = GENDER_MALE;
+
     uint32 RaceClassGender = (createInfo->Race) | (createInfo->Class << 8) | (createInfo->Gender << 16);
 
     SetUInt32Value(UNIT_FIELD_BYTES_0, (RaceClassGender | (powertype << 24)));
@@ -677,22 +682,57 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
             switch (createInfo->Race)
             {
                 case RACE_HUMAN:
+                case RACE_VRYKUL:
+                case RACE_PANDAREN:
+                case RACE_ALLIANCEPANDAREN:
+                case RACE_VOIDELF:
+                case RACE_KULTIRAN:
+                case RACE_THINHUMAN:
+                case RACE_HIGHELF:
+                case RACE_ALLIANCEDRACTHYR:
                     voucherId = 14646; break; // Goldshire Gift Voucher
                 case RACE_DWARF:
+                case RACE_TUSKARR:
+                case RACE_DARKIRONDWARF:
+                case RACE_ALLIANCEEARTHEN:
                 case RACE_GNOME:
+                case RACE_MECHAGNOME:
                     voucherId = 14647; break; // Kharanos Gift Voucher
                 case RACE_NIGHTELF:
+                case RACE_WORGEN:
+                case RACE_GILNEAN:
                     voucherId = 14648; break; // Dolanaar Gift Voucher
                 case RACE_ORC:
+                case RACE_GOBLIN:
+                case RACE_FELORC:
+                case RACE_MAGHARORC:
+                case RACE_OGRE:
+                case RACE_HORDEDRACTHYR:
+                case RACE_HORDEEARTHEN:
                 case RACE_TROLL:
+                case RACE_FORESTTROLL:
+                case RACE_ICETROLL:
+                case RACE_ZANDALARITROLL:
+                case RACE_MURLOC:
                     voucherId = 14649; break; // Razor Hill Gift Voucher
                 case RACE_TAUREN:
+                case RACE_TAUNKA:
+                case RACE_HORDEPANDAREN:
+                case RACE_HIGHMOUNTAINTAUREN:
+                case RACE_VULPERA:
                     voucherId = 14650; break; // Bloodhoof Village Gift Voucher
                 case RACE_UNDEAD_PLAYER:
+                case RACE_SKELETON:
+                case RACE_NORTHRENDSKELETON:
+                case RACE_DARKFALLEN:
                     voucherId = 14651; break; // Brill Gift Voucher
                 case RACE_BLOODELF:
+                case RACE_NAGA:
+                case RACE_NIGHTBORNE:
                     voucherId = 20938; break; // Falconwing Square Gift Voucher
                 case RACE_DRAENEI:
+                case RACE_BROKEN:
+                case RACE_LIGHTFORGEDDRAENEI:
                     voucherId = 22888; break; // Azure Watch Gift Voucher
                 default:
                     break;
@@ -874,7 +914,7 @@ int32 Player::getMaxTimer(MirrorTimerType timer)
     switch (timer)
     {
         case FATIGUE_TIMER:
-            return MINUTE * IN_MILLISECONDS;
+            return DISABLED_MIRROR_TIMER; // MINUTE * IN_MILLISECONDS;
         case BREATH_TIMER:
             {
                 if (!IsAlive() || HasWaterBreathingAura() || GetSession()->GetSecurity() >= AccountTypes(sWorld->getIntConfig(CONFIG_DISABLE_BREATHING)))
@@ -10818,23 +10858,32 @@ void Player::InitDataForForm(bool reapplyMods)
 
 void Player::InitDisplayIds()
 {
+    // The displays come from ChrRaces either way; reading them from there when the race/class pair has no
+    // playercreateinfo (e.g. a modpak's start data was removed) keeps the character from having display 0, which
+    // the collision code cannot handle.
     PlayerInfo const* info = sObjectMgr->GetPlayerInfo(getRace(true), getClass());
+    ChrRacesEntry const* raceEntry = sChrRacesStore.LookupEntry(getRace(true));
     if (!info)
     {
-        LOG_ERROR("entities.player", "Player {} has incorrect race/class pair. Can't init display ids.", GetGUID().ToString());
-        return;
+        LOG_ERROR("entities.player", "Player {} has incorrect race/class pair.{}", GetGUID().ToString(),
+            raceEntry ? " Using the ChrRaces displays." : " Can't init display ids.");
+        if (!raceEntry)
+            return;
     }
+
+    uint32 const displayMale = info ? info->displayId_m : raceEntry->model_m;
+    uint32 const displayFemale = info ? info->displayId_f : raceEntry->model_f;
 
     uint8 gender = getGender();
     switch (gender)
     {
         case GENDER_FEMALE:
-            SetDisplayId(info->displayId_f);
-            SetNativeDisplayId(info->displayId_f);
+            SetDisplayId(displayFemale);
+            SetNativeDisplayId(displayFemale);
             break;
         case GENDER_MALE:
-            SetDisplayId(info->displayId_m);
-            SetNativeDisplayId(info->displayId_m);
+            SetDisplayId(displayMale);
+            SetNativeDisplayId(displayMale);
             break;
         default:
             LOG_ERROR("entities.player", "Invalid gender {} for player", gender);
@@ -14250,6 +14299,10 @@ void Player::HandleFall(MovementInfo const& movementInfo)
                     damage = GetMaxHealth() / 2;
 
                 if (HasAura(SPELL_DIVINE_PROTECTION))
+                    damage /= 2;
+
+                // Kyrian racial Ascended Wings (spell 111104, WHE's F-068 from Aetheria's package) halves fall damage
+                if (HasAura(111104))
                     damage /= 2;
 
                 final_damage = EnvironmentalDamage(DAMAGE_FALL, damage);

@@ -2006,6 +2006,15 @@ CharacterCreating.Disabled = 0
 CharacterCreating.Disabled.RaceMask = 0
 
 #
+#    Shapeshift.SkinColorRaces
+#        Description: Races whose shapeshift forms (player_shapeshift_model) follow skin (fur) color
+#                     instead of hair color, as a comma-separated list of race IDs. Should match the
+#                     client's shapeshiftSkinColorRaces CVar. Needs a restart to change.
+#        Default:     "6,24,25,26,28,35" - (Tauren, Pandaren (neutral, Alliance, Horde), Highmountain Tauren, Vulpera)
+
+Shapeshift.SkinColorRaces = "6,24,25,26,28,35"
+
+#
 #    CharacterCreating.Disabled.ClassMask
 #        Description: Mask of classes which cannot be created by players.
 #        Example:     288 - (32 + 256, Death Knight and Warlock classes are disabled)

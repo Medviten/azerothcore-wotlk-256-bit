@@ -55,6 +55,7 @@
 #include <boost/algorithm/string.hpp>
 #include <limits>
 #include <numeric>
+#include <unordered_set>
 
 #include "ItemEnchantmentMgr.h"
 
@@ -1889,12 +1890,25 @@ void ObjectMgr::LoadPlayerShapeshiftModels()
 
 uint32 ObjectMgr::GetModelForShapeshift(ShapeshiftForm form, Player* player) const
 {
-    uint8 customizationID;
+    // Races whose forms follow fur (skin) color rather than hair color (Shapeshift.SkinColorRaces, to match the
+    // client's shapeshiftSkinColorRaces)
+    static std::unordered_set<uint8> const skinColorRaces = []
+    {
+        std::unordered_set<uint8> races;
+        std::string const list = sConfigMgr->GetOption<std::string>("Shapeshift.SkinColorRaces", "6,24,25,26,28,35");
+        for (std::string_view race : Acore::Tokenize(list, ',', false))
+        {
+            if (Optional<uint8> raceId = Acore::StringTo<uint8>(race))
+                races.insert(*raceId);
+            else
+                LOG_ERROR("server.loading", "Shapeshift.SkinColorRaces: ignoring '{}' (expected a race ID)", race);
+        }
+        return races;
+    }();
 
-    if (player->GetTeamId() == TEAM_ALLIANCE)
-        customizationID = player->GetByteValue(PLAYER_BYTES, 3); // Use Hair Color
-    else
-        customizationID = player->GetByteValue(PLAYER_BYTES, 0); // Use Skin Color
+    uint8 const customizationID = skinColorRaces.count(player->getRace())
+        ? player->GetByteValue(PLAYER_BYTES, 0)  // Use Skin Color
+        : player->GetByteValue(PLAYER_BYTES, 3); // Use Hair Color
 
     // getGender() tracks the active display model; real gender lives in PLAYER_BYTES_3
     uint8 gender = player->GetByteValue(PLAYER_BYTES_3, PLAYER_BYTES_3_OFFSET_GENDER);
@@ -4870,7 +4884,7 @@ void ObjectMgr::LoadPlayerInfo()
                     continue;
 
                 // skip expansion races if not playing with expansion
-                if (sWorld->getIntConfig(CONFIG_EXPANSION) < EXPANSION_THE_BURNING_CRUSADE && (race == RACE_BLOODELF || race == RACE_DRAENEI))
+                if (sChrRacesStore.LookupEntry(race)->expansion > sWorld->getIntConfig(CONFIG_EXPANSION))
                     continue;
 
                 // skip expansion classes if not playing with expansion

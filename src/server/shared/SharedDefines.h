@@ -76,19 +76,46 @@ enum Races
     RACE_TAUREN             = 6,  // TITLE Tauren
     RACE_GNOME              = 7,  // TITLE Gnome
     RACE_TROLL              = 8,  // TITLE Troll
-    //RACE_GOBLIN             = 9,
+    // Custom: every playable race any modpak may add, at its fixed id. Retail ChrRaces ids where retail has the race;
+    // the NPC races (12-21) are playable at their own ids (the NPC display races move to 160 + id, see DisplayRace);
+    // High Elf, Ogre, Darkfallen and Murloc take the first ids retail leaves free. Races without ChrRaces/playercreateinfo data stay unused.
+    RACE_GOBLIN             = 9,  // TITLE Goblin
     RACE_BLOODELF           = 10, // TITLE Blood Elf
-    RACE_DRAENEI            = 11 //, TITLE Draenei
-    //RACE_FEL_ORC        = 12,
-    //RACE_NAGA           = 13,
-    //RACE_BROKEN         = 14,
-    //RACE_SKELETON       = 15,
-    //RACE_VRYKUL         = 16,
-    //RACE_TUSKARR        = 17,
-    //RACE_FOREST_TROLL   = 18,
-    //RACE_TAUNKA         = 19,
-    //RACE_NORTHREND_SKELETON = 20,
-    //RACE_ICE_TROLL      = 21
+    RACE_DRAENEI            = 11, // TITLE Draenei
+    RACE_FELORC             = 12, // TITLE Fel Orc
+    RACE_NAGA               = 13, // TITLE Naga
+    RACE_BROKEN             = 14, // TITLE Broken
+    RACE_SKELETON           = 15, // TITLE Skeleton
+    RACE_VRYKUL             = 16, // TITLE Vrykul
+    RACE_TUSKARR            = 17, // TITLE Tuskarr
+    RACE_FORESTTROLL        = 18, // TITLE Forest Troll
+    RACE_TAUNKA             = 19, // TITLE Taunka
+    RACE_NORTHRENDSKELETON  = 20, // TITLE Northrend Skeleton
+    RACE_ICETROLL           = 21, // TITLE Ice Troll
+    RACE_WORGEN             = 22, // TITLE Worgen
+    RACE_GILNEAN            = 23, // TITLE Gilnean
+    RACE_PANDAREN           = 24, // TITLE Pandaren
+    RACE_ALLIANCEPANDAREN   = 25, // TITLE Pandaren
+    RACE_HORDEPANDAREN      = 26, // TITLE Pandaren
+    RACE_NIGHTBORNE         = 27, // TITLE Nightborne
+    RACE_HIGHMOUNTAINTAUREN = 28, // TITLE Highmountain Tauren
+    RACE_VOIDELF            = 29, // TITLE Void Elf
+    RACE_LIGHTFORGEDDRAENEI = 30, // TITLE Lightforged Draenei
+    RACE_ZANDALARITROLL     = 31, // TITLE Zandalari Troll
+    RACE_KULTIRAN           = 32, // TITLE Kul Tiran
+    RACE_THINHUMAN          = 33, // TITLE Thin Human
+    RACE_DARKIRONDWARF      = 34, // TITLE Dark Iron Dwarf
+    RACE_VULPERA            = 35, // TITLE Vulpera
+    RACE_MAGHARORC          = 36, // TITLE Mag'har Orc
+    RACE_MECHAGNOME         = 37, // TITLE Mechagnome
+    RACE_HIGHELF            = 38, // TITLE High Elf
+    RACE_OGRE               = 39, // TITLE Ogre
+    RACE_DARKFALLEN         = 40, // TITLE Darkfallen
+    RACE_MURLOC             = 41, // TITLE Murloc
+    RACE_ALLIANCEDRACTHYR   = 52, // TITLE Dracthyr
+    RACE_HORDEDRACTHYR      = 70, // TITLE Dracthyr
+    RACE_HORDEEARTHEN       = 84, // TITLE Earthen
+    RACE_ALLIANCEEARTHEN    = 85  // TITLE Earthen
 };
 
 // DisplayRace values from CreatureDisplayInfoExtra.dbc
@@ -106,6 +133,8 @@ enum class DisplayRace : uint8
     Goblin            = 9,
     BloodElf          = 10,
     Draenei           = 11,
+    // Custom: playable races use their race id (see Races). WHE moves the stock NPC display races to 160 + id
+    // (@NPC* in config.sql) so the NPC races can be playable at their own ids.
     FelOrc            = 12,
     Naga              = 13,
     Broken            = 14,
@@ -115,7 +144,42 @@ enum class DisplayRace : uint8
     ForestTroll       = 18,
     Taunka            = 19,
     NorthrendSkeleton = 20,
-    IceTroll          = 21
+    IceTroll          = 21,
+    Worgen            = 22,
+    Gilnean           = 23,
+    Pandaren          = 24,
+    AlliancePandaren  = 25,
+    HordePandaren     = 26,
+    Nightborne        = 27,
+    HighmountainTauren = 28,
+    VoidElf           = 29,
+    LightforgedDraenei = 30,
+    ZandalariTroll    = 31,
+    KulTiran          = 32,
+    ThinHuman         = 33,
+    DarkIronDwarf     = 34,
+    Vulpera           = 35,
+    MagharOrc         = 36,
+    Mechagnome        = 37,
+    HighElf           = 38,
+    Ogre              = 39,
+    Darkfallen        = 40,
+    Murloc            = 41,
+    AllianceDracthyr  = 52,
+    HordeDracthyr     = 70,
+    HordeEarthen      = 84,
+    AllianceEarthen   = 85,
+    NpcGoblin         = 169,
+    NpcFelOrc         = 172,
+    NpcNaga           = 173,
+    NpcBroken         = 174,
+    NpcSkeleton       = 175,
+    NpcVrykul         = 176,
+    NpcTuskarr        = 177,
+    NpcForestTroll    = 178,
+    NpcTaunka         = 179,
+    NpcNorthrendSkeleton = 180,
+    NpcIceTroll       = 181
 };
 
 // Class value is index in ChrClasses.dbc
