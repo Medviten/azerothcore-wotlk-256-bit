@@ -4573,6 +4573,35 @@ AllowTwoSide.Interaction.Arena = 0
 AllowTwoSide.Interaction.Auction = 0
 
 #
+#    AllowTwoSide.EnemyTerritory
+#        Description: Faction Free: do not treat the other faction's zones as hostile territory,
+#                     so entering an enemy capital (or, on PvP realms, any enemy zone) does not
+#                     flag players for PvP.
+#        Default:     0 - (Disabled, stock behaviour)
+#                     1 - (Enabled)
+
+AllowTwoSide.EnemyTerritory = 0
+
+#
+#    AllowTwoSide.QuestReputation
+#        Description: Faction Free: let quests reward reputation with factions that are hostile to
+#                     the player's team, so the other faction's reputations can be earned.
+#        Default:     0 - (Disabled, stock behaviour)
+#                     1 - (Enabled)
+
+AllowTwoSide.QuestReputation = 0
+
+#
+#    AllowTwoSide.KillReputation
+#        Description: Faction Free: let kills that normally reward reputation by team (e.g. Honor
+#                     Hold or Thrallmar) reward both teams' factions. While championing a faction,
+#                     kills keep rewarding it once.
+#        Default:     0 - (Disabled, stock behaviour)
+#                     1 - (Enabled)
+
+AllowTwoSide.KillReputation = 0
+
+#
 #    TalentsInspecting
 #        Description: Allow inspecting characters from the opposing faction.
 #                     Doesn't affect characters in gamemaster mode.

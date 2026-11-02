@@ -6159,7 +6159,11 @@ void Player::RewardReputation(Unit* victim)
 
     TeamId teamId = GetTeamId(true); // Always check player original reputation when rewarding
 
-    if (Rep->RepFaction1 && (!Rep->TeamDependent || teamId == TEAM_ALLIANCE))
+    // Faction Free: with AllowTwoSide.KillReputation, team-dependent kills reward both teams' factions.
+    // Not while championing, since both rewards would then go to the championed faction.
+    bool allTeams = !Rep->TeamDependent || (sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_KILL_REPUTATION) && !ChampioningFaction);
+
+    if (Rep->RepFaction1 && (allTeams || teamId == TEAM_ALLIANCE))
     {
         float donerep1 = CalculateReputationGain(REPUTATION_SOURCE_KILL, victim->GetLevel(), static_cast<float>(Rep->RepValue1), ChampioningFaction ? ChampioningFaction : Rep->RepFaction1);
         sScriptMgr->OnPlayerGiveReputation(this, Rep->RepFaction1, donerep1, REPUTATION_SOURCE_KILL);
@@ -6171,7 +6175,7 @@ void Player::RewardReputation(Unit* victim)
         }
     }
 
-    if (Rep->RepFaction2 && (!Rep->TeamDependent || teamId == TEAM_HORDE))
+    if (Rep->RepFaction2 && (allTeams || teamId == TEAM_HORDE))
     {
         float donerep2 = CalculateReputationGain(REPUTATION_SOURCE_KILL, victim->GetLevel(), static_cast<float>(Rep->RepValue2), ChampioningFaction ? ChampioningFaction : Rep->RepFaction2);
         sScriptMgr->OnPlayerGiveReputation(this, Rep->RepFaction2, donerep2, REPUTATION_SOURCE_KILL);
@@ -6254,7 +6258,8 @@ void Player::RewardReputation(Quest const* quest)
         if (!factionEntry)
             continue;
 
-        FactionTemplateEntry const* templateEntry = GetAnyFactionTemplateForFaction(factionEntry->ID);
+        // Faction Free: with AllowTwoSide.QuestReputation, quests can reward reputation with the other faction
+        FactionTemplateEntry const* templateEntry = sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_QUEST_REPUTATION) ? nullptr : GetAnyFactionTemplateForFaction(factionEntry->ID);
         if (templateEntry)
         {
             bool hostile = (GetTeamId() == TEAM_ALLIANCE) ? templateEntry->IsHostileToAlliancePlayers()
