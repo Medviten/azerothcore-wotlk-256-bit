@@ -914,7 +914,7 @@ int32 Player::getMaxTimer(MirrorTimerType timer)
     switch (timer)
     {
         case FATIGUE_TIMER:
-            return DISABLED_MIRROR_TIMER; // MINUTE * IN_MILLISECONDS;
+            return MINUTE * IN_MILLISECONDS;
         case BREATH_TIMER:
             {
                 if (!IsAlive() || HasWaterBreathingAura() || GetSession()->GetSecurity() >= AccountTypes(sWorld->getIntConfig(CONFIG_DISABLE_BREATHING)))
@@ -976,7 +976,7 @@ void Player::HandleDrowning(uint32 time_diff)
     }
 
     // In dark water
-    if (m_MirrorTimerFlags & UNDERWATER_INDARKWATER)
+    if ((m_MirrorTimerFlags & UNDERWATER_INDARKWATER) && !sWorld->getBoolConfig(CONFIG_DISABLE_FATIGUE))
     {
         // Fatigue timer not activated - activate it
         if (m_MirrorTimer[FATIGUE_TIMER] == DISABLED_MIRROR_TIMER)

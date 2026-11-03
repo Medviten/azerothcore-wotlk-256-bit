@@ -1630,6 +1630,15 @@ GM.TicketSystem.ChanceOfGMSurvey = 50
 DisableWaterBreath = 4
 
 #
+#    DisableFatigue
+#        Description: Stops the fatigue timer in deep water, along with its damage and the teleport of
+#                     ghosts to the graveyard.
+#        Default:     0 - (Disabled, fatigue works as normal)
+#                     1 - (Enabled, no fatigue)
+
+DisableFatigue = 0
+
+#
 #    AllFlightPaths
 #        Description: Character knows all flight paths (of both factions) after creation.
 #        Default:     0 - (Disabled)

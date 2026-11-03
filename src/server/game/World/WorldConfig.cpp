@@ -342,6 +342,8 @@ void WorldConfig::BuildConfigCache()
 
     SetConfigValue<uint32>(CONFIG_DISABLE_BREATHING, "DisableWaterBreath", SEC_CONSOLE);
 
+    SetConfigValue<bool>(CONFIG_DISABLE_FATIGUE, "DisableFatigue", false);
+
     SetConfigValue<bool>(CONFIG_ALWAYS_MAX_SKILL_FOR_LEVEL, "AlwaysMaxSkillForLevel", false);
 
     SetConfigValue<uint32>(CONFIG_EXPANSION, "Expansion", 2, ConfigValueCache::Reloadable::No);
