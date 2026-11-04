@@ -19,6 +19,7 @@
 #include "AccountMgr.h"
 #include "StringConvert.h"
 #include "DatabaseEnv.h"
+#include "Log.h"
 #include "ObjectMgr.h"
 #include "Player.h"
 #include "Util.h"
@@ -32,6 +33,7 @@ RaceMask RaceMgr::_playableRaceMask;
 RaceMask RaceMgr::_allianceRaceMask;
 RaceMask RaceMgr::_hordeRaceMask;
 RaceMask RaceMgr::_maleOnlyRaceMask;
+std::unordered_map<uint8, RaceMgr::RaceTemplate> RaceMgr::_raceTemplates;
 
 RaceMgr::RaceMgr()
 {
@@ -84,6 +86,52 @@ void RaceMgr::LoadRaces()
         if (maleDisplay && femaleDisplay && maleDisplay->ModelId == femaleDisplay->ModelId)
             _maleOnlyRaceMask |= raceBit;
     }
+
+    LoadRaceTemplates();
+}
+
+void RaceMgr::LoadRaceTemplates()
+{
+    _raceTemplates.clear();
+
+    QueryResult result = WorldDatabase.Query("SELECT race, home_race, kin_race, shapeshift_skin_color FROM player_race_template");
+    if (!result)
+    {
+        LOG_INFO("server.loading", ">> Loaded 0 race templates. DB table `player_race_template` is empty.");
+        return;
+    }
+
+    do
+    {
+        Field* fields = result->Fetch();
+        _raceTemplates[fields[0].Get<uint8>()] = { fields[1].Get<uint8>(), fields[2].Get<uint8>(), fields[3].Get<uint8>() != 0 };
+    } while (result->NextRow());
+
+    LOG_INFO("server.loading", ">> Loaded {} race templates", _raceTemplates.size());
+}
+
+uint8 RaceMgr::GetHomeRace(uint8 race)
+{
+    auto itr = _raceTemplates.find(race);
+    return itr != _raceTemplates.end() ? itr->second.homeRace : race;
+}
+
+uint8 RaceMgr::GetKinRace(uint8 race)
+{
+    auto itr = _raceTemplates.find(race);
+    return itr != _raceTemplates.end() ? itr->second.kinRace : race;
+}
+
+uint8 RaceMgr::GetLookalikeRace(uint8 race)
+{
+    uint8 const kin = GetKinRace(race);
+    return kin && kin != uint8(DisplayRace::Goblin) ? kin : GetHomeRace(race);
+}
+
+bool RaceMgr::UsesSkinColorForms(uint8 race)
+{
+    auto itr = _raceTemplates.find(race);
+    return itr != _raceTemplates.end() && itr->second.shapeshiftSkinColor;
 }
 
 RaceMask RaceMgr::ReadRaceMask(Field const* fields, uint32 lowIndex, uint32 highIndex)

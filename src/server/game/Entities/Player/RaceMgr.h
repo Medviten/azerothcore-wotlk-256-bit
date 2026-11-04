@@ -23,6 +23,7 @@
 #include "RaceMask.h"
 #include "SharedDefines.h"
 #include <map>
+#include <unordered_map>
 
 class Player;
 class WorldPacket;
@@ -56,13 +57,32 @@ public:
 
     /// Races players cannot create or change to, from CharacterCreating.Disabled.RaceMask.
     static RaceMask GetCreationDisabledRaceMask();
+
+    /// Loads player_race_template, which the race modpaks fill, so adding a race needs no code.
+    static void LoadRaceTemplates();
+    /// The stock race whose start area a race shares. A race without a template is its own home.
+    static uint8 GetHomeRace(uint8 race);
+    /// The race whose looks and language a race shares, or 0 for none. A race without a template is its own kin.
+    static uint8 GetKinRace(uint8 race);
+    /// The stock race a race can pass for: its kin, or its home if its kin is none or has no stock player model.
+    static uint8 GetLookalikeRace(uint8 race);
+    /// Whether a race's shapeshift forms follow skin (fur) color instead of hair color.
+    static bool UsesSkinColorForms(uint8 race);
 private:
+    struct RaceTemplate
+    {
+        uint8 homeRace;
+        uint8 kinRace;
+        bool shapeshiftSkinColor;
+    };
+
     static uint16 _maxRaces; // Max playable race + 1
 
     static RaceMask _playableRaceMask;
     static RaceMask _allianceRaceMask;
     static RaceMask _hordeRaceMask;
     static RaceMask _maleOnlyRaceMask;
+    static std::unordered_map<uint8, RaceTemplate> _raceTemplates;
 };
 
 #define sRaceMgr RaceMgr::instance()

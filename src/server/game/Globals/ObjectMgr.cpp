@@ -55,7 +55,6 @@
 #include <boost/algorithm/string.hpp>
 #include <limits>
 #include <numeric>
-#include <unordered_set>
 
 #include "ItemEnchantmentMgr.h"
 
@@ -1894,23 +1893,7 @@ void ObjectMgr::LoadPlayerShapeshiftModels()
 
 uint32 ObjectMgr::GetModelForShapeshift(ShapeshiftForm form, Player* player) const
 {
-    // Races whose forms follow fur (skin) color rather than hair color (Shapeshift.SkinColorRaces, to match the
-    // client's shapeshiftSkinColorRaces)
-    static std::unordered_set<uint8> const skinColorRaces = []
-    {
-        std::unordered_set<uint8> races;
-        std::string const list = sConfigMgr->GetOption<std::string>("Shapeshift.SkinColorRaces", "6,24,25,26,28,35");
-        for (std::string_view race : Acore::Tokenize(list, ',', false))
-        {
-            if (Optional<uint8> raceId = Acore::StringTo<uint8>(race))
-                races.insert(*raceId);
-            else
-                LOG_ERROR("server.loading", "Shapeshift.SkinColorRaces: ignoring '{}' (expected a race ID)", race);
-        }
-        return races;
-    }();
-
-    uint8 const customizationID = skinColorRaces.count(player->getRace())
+    uint8 const customizationID = sRaceMgr->UsesSkinColorForms(player->getRace())
         ? player->GetByteValue(PLAYER_BYTES, 0)  // Use Skin Color
         : player->GetByteValue(PLAYER_BYTES, 3); // Use Hair Color
 

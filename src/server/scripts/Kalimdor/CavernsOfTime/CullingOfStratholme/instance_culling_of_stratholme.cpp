@@ -19,6 +19,7 @@
 #include "CreatureTextMgr.h"
 #include "InstanceMapScript.h"
 #include "Player.h"
+#include "RaceMgr.h"
 #include "ScriptedCreature.h"
 #include "SpellInfo.h"
 #include "TemporarySummon.h"
@@ -66,26 +67,10 @@ public:
             if (instance->GetPlayersCountExceptGMs() == 1)
                 SetData(DATA_ARTHAS_REPOSITION, 2);
 
-            // Human, Dwarf and Gnome lookalikes keep their own appearance; everyone else is disguised as a human
-            switch (plr->getRace())
-            {
-                case RACE_HUMAN:
-                case RACE_VRYKUL:
-                case RACE_WORGEN:
-                case RACE_GILNEAN:
-                case RACE_KULTIRAN:
-                case RACE_THINHUMAN:
-                case RACE_DWARF:
-                case RACE_DARKIRONDWARF:
-                case RACE_HORDEEARTHEN:
-                case RACE_ALLIANCEEARTHEN:
-                case RACE_GNOME:
-                case RACE_MECHAGNOME:
-                    break;
-                default:
-                    plr->CastSpell(plr, ((plr->getGender() == GENDER_MALE) ? SPELL_HUMAN_MALE : SPELL_HUMAN_FEMALE), true);
-                    break;
-            }
+            // Human, Dwarf and Gnome kin keep their own appearance; everyone else is disguised as a human
+            uint8 const kin = sRaceMgr->GetKinRace(plr->getRace());
+            if (kin != RACE_HUMAN && kin != RACE_DWARF && kin != RACE_GNOME)
+                plr->CastSpell(plr, ((plr->getGender() == GENDER_MALE) ? SPELL_HUMAN_MALE : SPELL_HUMAN_FEMALE), true);
         }
 
         void OnCreatureCreate(Creature* creature) override

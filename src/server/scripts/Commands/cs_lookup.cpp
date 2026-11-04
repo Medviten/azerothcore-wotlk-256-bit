@@ -1672,9 +1672,10 @@ public:
                         pclass = gpd->Class;
                     }
 
-                    if (plevel > 0 && EnumUtils::IsValid<Races>(prace) && pclass > 0 && pclass <= CLASS_DRUID)
+                    ChrRacesEntry const* raceEntry = sChrRacesStore.LookupEntry(prace);
+                    if (plevel > 0 && raceEntry && pclass > 0 && pclass <= CLASS_DRUID)
                     {
-                        handler->PSendSysMessage("  {} (GUID {}) - {} - {} - {}{}", name, guid, EnumUtils::ToTitle(Races(prace)), EnumUtils::ToTitle(Classes(pclass)), plevel, (online ? " - [ONLINE]" : ""));
+                        handler->PSendSysMessage("  {} (GUID {}) - {} - {} - {}{}", name, guid, raceEntry->name[handler->GetSessionDbcLocale()], EnumUtils::ToTitle(Classes(pclass)), plevel, (online ? " - [ONLINE]" : ""));
                     }
                     else
                     {

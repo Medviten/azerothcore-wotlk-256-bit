@@ -2380,45 +2380,30 @@ void WorldSession::HandleCharFactionOrRaceChangeCallback(std::shared_ptr<Charact
 
         // Race specific languages (new races speak the language of their kin, if it has one)
         uint32 raceLanguage = 0;
-        switch (factionChangeInfo->Race)
+        switch (sRaceMgr->GetKinRace(factionChangeInfo->Race))
         {
         case RACE_DWARF:
-        case RACE_DARKIRONDWARF:
             raceLanguage = 111;
             break;
         case RACE_DRAENEI:
-        case RACE_BROKEN:
-        case RACE_LIGHTFORGEDDRAENEI:
             raceLanguage = 759;
             break;
         case RACE_GNOME:
-        case RACE_MECHAGNOME:
             raceLanguage = 313;
             break;
         case RACE_NIGHTELF:
             raceLanguage = 113;
             break;
         case RACE_UNDEAD_PLAYER:
-        case RACE_SKELETON:
-        case RACE_NORTHRENDSKELETON:
             raceLanguage = 673;
             break;
         case RACE_TAUREN:
-        case RACE_TAUNKA:
-        case RACE_HIGHMOUNTAINTAUREN:
             raceLanguage = 115;
             break;
         case RACE_TROLL:
-        case RACE_FORESTTROLL:
-        case RACE_ICETROLL:
-        case RACE_ZANDALARITROLL:
             raceLanguage = 315;
             break;
         case RACE_BLOODELF:
-        case RACE_NIGHTBORNE:
-        case RACE_VOIDELF:
-        case RACE_HIGHELF:
-        case RACE_DARKFALLEN:
             raceLanguage = 137;
             break;
         }

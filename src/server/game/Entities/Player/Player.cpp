@@ -66,8 +66,8 @@
 #include "Pet.h"
 #include "PetitionMgr.h"
 #include "QuestDef.h"
-#include "RBAC.h"
 #include "RaceMgr.h"
+#include "RBAC.h"
 #include "Realm.h"
 #include "ReputationMgr.h"
 #include "ScriptMgr.h"
@@ -679,60 +679,25 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
             voucherId = 39713; // Ebon Hold Gift Voucher
         else
         {
-            switch (createInfo->Race)
+            switch (sRaceMgr->GetHomeRace(createInfo->Race))
             {
                 case RACE_HUMAN:
-                case RACE_VRYKUL:
-                case RACE_PANDAREN:
-                case RACE_ALLIANCEPANDAREN:
-                case RACE_VOIDELF:
-                case RACE_KULTIRAN:
-                case RACE_THINHUMAN:
-                case RACE_HIGHELF:
-                case RACE_ALLIANCEDRACTHYR:
                     voucherId = 14646; break; // Goldshire Gift Voucher
                 case RACE_DWARF:
-                case RACE_TUSKARR:
-                case RACE_DARKIRONDWARF:
-                case RACE_ALLIANCEEARTHEN:
                 case RACE_GNOME:
-                case RACE_MECHAGNOME:
                     voucherId = 14647; break; // Kharanos Gift Voucher
                 case RACE_NIGHTELF:
-                case RACE_WORGEN:
-                case RACE_GILNEAN:
                     voucherId = 14648; break; // Dolanaar Gift Voucher
                 case RACE_ORC:
-                case RACE_GOBLIN:
-                case RACE_FELORC:
-                case RACE_MAGHARORC:
-                case RACE_OGRE:
-                case RACE_HORDEDRACTHYR:
-                case RACE_HORDEEARTHEN:
                 case RACE_TROLL:
-                case RACE_FORESTTROLL:
-                case RACE_ICETROLL:
-                case RACE_ZANDALARITROLL:
-                case RACE_MURLOC:
                     voucherId = 14649; break; // Razor Hill Gift Voucher
                 case RACE_TAUREN:
-                case RACE_TAUNKA:
-                case RACE_HORDEPANDAREN:
-                case RACE_HIGHMOUNTAINTAUREN:
-                case RACE_VULPERA:
                     voucherId = 14650; break; // Bloodhoof Village Gift Voucher
                 case RACE_UNDEAD_PLAYER:
-                case RACE_SKELETON:
-                case RACE_NORTHRENDSKELETON:
-                case RACE_DARKFALLEN:
                     voucherId = 14651; break; // Brill Gift Voucher
                 case RACE_BLOODELF:
-                case RACE_NAGA:
-                case RACE_NIGHTBORNE:
                     voucherId = 20938; break; // Falconwing Square Gift Voucher
                 case RACE_DRAENEI:
-                case RACE_BROKEN:
-                case RACE_LIGHTFORGEDDRAENEI:
                     voucherId = 22888; break; // Azure Watch Gift Voucher
                 default:
                     break;
