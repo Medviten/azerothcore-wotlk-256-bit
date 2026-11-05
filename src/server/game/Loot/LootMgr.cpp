@@ -100,6 +100,7 @@ public:
     void AddEntry(LootStoreItem* item);                     // Adds an entry to the group (at loading stage)
     bool HasQuestDrop(LootTemplateMap const& store) const;  // True if group includes at least 1 quest drop entry
     bool HasQuestDropForPlayer(Player const* player, LootTemplateMap const& store) const;
+    bool HasNonQuestDrop(LootTemplateMap const& store) const; // True if group includes at least 1 entry that is not quest gated
     // The same for active quests of the player
     void Process(Loot& loot, Player const* player, LootStore const& lootstore, uint16 lootMode, uint16 nonRefIterationsLeft) const;    // Rolls an item from the group (if any) and adds the item to the loot
     float RawTotalChance() const;                       // Overall chance for the group (without equal chanced items)
@@ -233,6 +234,15 @@ bool LootStore::HaveQuestLootForPlayer(uint32 loot_id, Player const* player) con
             return true;
 
     return false;
+}
+
+bool LootStore::HaveNonQuestLootFor(uint32 loot_id) const
+{
+    LootTemplateMap::const_iterator itr = m_LootTemplates.find(loot_id);
+    if (itr == m_LootTemplates.end())
+        return false;
+
+    return itr->second->HasNonQuestDrop(m_LootTemplates);
 }
 
 void LootStore::ResetConditions()
@@ -1346,6 +1356,56 @@ bool LootTemplate::LootGroup::HasQuestDrop(LootTemplateMap const& store) const
     return false;
 }
 
+// True if group includes at least 1 entry any player may take regardless of quest status
+bool LootTemplate::LootGroup::HasNonQuestDrop(LootTemplateMap const& store) const
+{
+    for (LootStoreItemList::const_iterator i = ExplicitlyChanced.begin(); i != ExplicitlyChanced.end(); ++i)
+    {
+        LootStoreItem* item = *i;
+        if (item->reference) // References
+        {
+            LootTemplateMap::const_iterator Referenced = store.find(std::abs(item->reference));
+            if (Referenced == store.end())
+            {
+                continue; // Error message [should be] already printed at loading stage
+            }
+
+            if (Referenced->second->HasNonQuestDrop(store))
+            {
+                return true;
+            }
+        }
+        else if (!item->needs_quest)
+        {
+            return true;
+        }
+    }
+
+    for (LootStoreItemList::const_iterator i = EqualChanced.begin(); i != EqualChanced.end(); ++i)
+    {
+        LootStoreItem* item = *i;
+        if (item->reference) // References
+        {
+            LootTemplateMap::const_iterator Referenced = store.find(std::abs(item->reference));
+            if (Referenced == store.end())
+            {
+                continue; // Error message [should be] already printed at loading stage
+            }
+
+            if (Referenced->second->HasNonQuestDrop(store))
+            {
+                return true;
+            }
+        }
+        else if (!item->needs_quest)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // True if group includes at least 1 quest drop entry for active quests of the player
 bool LootTemplate::LootGroup::HasQuestDropForPlayer(Player const* player, LootTemplateMap const& store) const
 {
@@ -1760,6 +1820,40 @@ bool LootTemplate::HasQuestDrop(LootTemplateMap const& store) const
         if (LootGroup* group = *i)
         {
             if (group->HasQuestDrop(store))
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+// True if template includes at least 1 drop that is not gated behind a quest
+bool LootTemplate::HasNonQuestDrop(LootTemplateMap const& store) const
+{
+    for (LootStoreItemList::const_iterator i = Entries.begin(); i != Entries.end(); ++i)
+    {
+        LootStoreItem* item = *i;
+        if (item->reference)                                // References
+        {
+            LootTemplateMap::const_iterator Referenced = store.find(std::abs(item->reference));
+            if (Referenced == store.end())
+                continue;                                   // Error message [should be] already printed at loading stage
+
+            if (Referenced->second->HasNonQuestDrop(store))
+                return true;
+        }
+        else if (!item->needs_quest)
+            return true;                                    // non-quest drop found
+    }
+
+    // Now processing groups
+    for (LootGroups::const_iterator i = Groups.begin(); i != Groups.end(); ++i)
+    {
+        if (LootGroup* group = *i)
+        {
+            if (group->HasNonQuestDrop(store))
             {
                 return true;
             }

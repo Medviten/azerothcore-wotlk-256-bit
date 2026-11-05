@@ -165,6 +165,8 @@ Player::Player(WorldSession* session): Unit(), m_mover(this), _cinematicMgr(*thi
     m_objectType |= TYPEMASK_PLAYER;
     m_objectTypeId = TYPEID_PLAYER;
 
+    m_phaseMgr = std::make_unique<PhaseMgr>(this); // F-194 Cata zone phasing progression
+
     m_valuesCount = PLAYER_END;
 
     m_session = session;
@@ -5975,9 +5977,37 @@ void Player::SendCinematicStart(uint32 CinematicSequenceId) const
 
 void Player::SendMovieStart(uint32 MovieId)
 {
+    // Zeppelin: remembered so CMSG_COMPLETE_MOVIE can be matched back to the movie
+    // it ends -- the packet itself carries no movie id
+    _pendingMovieId = MovieId;
+
     WorldPacket data(SMSG_TRIGGER_MOVIE, 4);
     data << uint32(MovieId);
     SendDirectMessage(&data);
+}
+
+void Player::CompletedMovie()
+{
+    uint32 movieId = _pendingMovieId;
+    if (!movieId)
+        return;
+
+    _pendingMovieId = 0;
+
+    if (!sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE))
+        return;
+
+    // Zeppelin: SMART_EVENT_MOVIE_COMPLETED for creatures near the player, so scripted
+    // scenes can start when the player can actually see the world again instead of
+    // racing the movie. Fires on skip too -- the client sends the same packet.
+    std::list<Unit*> nearby;
+    Acore::AnyUnitInObjectRangeCheck check(this, 150.0f);
+    Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(this, nearby, check);
+    Cell::VisitObjects(this, searcher, 150.0f);
+    for (Unit* nearbyUnit : nearby)
+        if (Creature* creature = nearbyUnit->ToCreature())
+            if (creature->IsAIEnabled)
+                creature->AI()->sMovieCompleted(this, movieId);
 }
 
 void Player::CheckAreaExploreAndOutdoor()
@@ -8121,6 +8151,17 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
             if (go)
                 go->ForceValuesUpdateAtIndex(GAMEOBJECT_BYTES_1);
 
+            SendLootRelease(guid);
+            return;
+        }
+
+        // A quest-only chest this player has no use for cannot be opened at all. The
+        // per-target GO_FLAG_NOT_SELECTABLE from GameObject::BuildValuesUpdate stops the
+        // client offering it; this stops a client that ignores the flag from consuming it
+        // anyway, since a consumable chest despawns on the loot release even when the loot
+        // came out empty.
+        if (!IsGameMaster() && go->IsQuestChestUnavailableFor(this))
+        {
             SendLootRelease(guid);
             return;
         }
@@ -13961,6 +14002,14 @@ void Player::AutoStoreLoot(uint8 bag, uint8 slot, uint32 loot_id, LootStore cons
     for (uint32 i = 0; i < max_slot; ++i)
     {
         LootItem* lootItem = loot.LootItemInSlot(i, this);
+
+        // LootItemInSlot does not enforce loot conditions: a player who fails the gate
+        // simply has no entry in PlayerNonQuestNonFFAConditionalItems and the row is
+        // handed back anyway. The loot window filters those rows when building the
+        // packet, so the check only ever ran there - auto-stored loot (group disenchant
+        // roll, auto-skinning, spell loot) got every conditional row regardless (I-314).
+        if (!lootItem || (sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE) && !lootItem->AllowedForPlayer(this, loot.sourceWorldObjectGUID)))
+            continue;
 
         ItemPosCountVec dest;
         InventoryResult msg = CanStoreNewItem(bag, slot, dest, lootItem->itemid, lootItem->count);

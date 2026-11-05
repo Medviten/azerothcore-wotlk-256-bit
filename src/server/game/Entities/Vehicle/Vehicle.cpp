@@ -25,12 +25,35 @@
 #include "ScriptMgr.h"
 #include "TemporarySummon.h"
 #include "Unit.h"
+#include "World.h"
 #include "Util.h"
 #include <algorithm>
 
 enum PowerDisplayIds
 {
     POWER_DISPLAY_PYRITE = 41
+};
+
+// Zeppelin (I-311): deferred vehicle-bar send for riders of uncontrolled CAN_CAST
+// seats — see the comment at the AddPassenger call site. Runs on the passenger's
+// event processor, so it is cancelled automatically if the player is destroyed.
+class VehicleBarInitEvent : public BasicEvent
+{
+public:
+    VehicleBarInitEvent(Player* player, ObjectGuid vehicleGuid)
+        : _player(player), _vehicleGuid(vehicleGuid) { }
+
+    bool Execute(uint64 /*time*/, uint32 /*diff*/) override
+    {
+        if (Unit* base = _player->GetVehicleBase())
+            if (base->GetGUID() == _vehicleGuid)
+                _player->VehicleSpellInitialize();
+        return true;
+    }
+
+private:
+    Player* _player;
+    ObjectGuid _vehicleGuid;
 };
 
 Vehicle::Vehicle(Unit* unit, VehicleEntry const* vehInfo, uint32 creatureEntry) :
@@ -442,6 +465,18 @@ bool Vehicle::AddPassenger(Unit* unit, int8 seatId)
             return false;
         }
     }
+    // Zeppelin (I-311): retail serves the vehicle action bar on cast-capable seats even
+    // without CAN_CONTROL (client shows it via Lua_UnitHasVehicleUI, e.g. Stormcrest
+    // Eagle seat 2112) — but the charm above is the only path that sends it, so riders
+    // of uncontrolled seats got an empty bar. The send must be DEFERRED: the client
+    // only learns it is in the vehicle from the control-vehicle aura in the end-of-tick
+    // update batch, and a PET_SPELLS sent synchronously here arrives first and is
+    // discarded. The matching cast authorization lives in HandlePetCastSpellOpcode;
+    // HandleRequestPetInfo re-serves the bar on client-side UI reloads.
+    else if (_me->IsCreature() && unit->IsPlayer() && sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE)
+             && seat->second.SeatInfo->m_flags & VEHICLE_SEAT_FLAG_CAN_CAST)
+        unit->m_Events.AddEvent(new VehicleBarInitEvent(unit->ToPlayer(), _me->GetGUID()),
+                                unit->m_Events.CalculateTime(1500));
 
     if (_me->IsInWorld())
     {
@@ -520,6 +555,10 @@ void Vehicle::RemovePassenger(Unit* unit)
 
     if (_me->IsCreature() && unit->IsPlayer() && seat->second.SeatInfo->m_flags & VEHICLE_SEAT_FLAG_CAN_CONTROL)
         _me->RemoveCharmedBy(unit);
+    // Zeppelin (I-311): mirror of the uncontrolled-cast-seat bar in AddPassenger
+    else if (_me->IsCreature() && unit->IsPlayer() && sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE)
+             && seat->second.SeatInfo->m_flags & VEHICLE_SEAT_FLAG_CAN_CAST)
+        unit->ToPlayer()->SendRemoveControlBar();
 
     if (_me->IsInWorld())
     {

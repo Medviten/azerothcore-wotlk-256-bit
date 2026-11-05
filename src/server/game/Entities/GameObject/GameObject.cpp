@@ -1390,6 +1390,46 @@ bool GameObject::ActivateToQuest(Player* target) const
     return false;
 }
 
+// A chest whose whole loot table is quest gated has nothing to offer a player who is not
+// on that quest, or who has already filled the objective. The core does not model that:
+// chest.questId is unused (GameObjectData.h), chests are absent from GameObject::Use, and
+// opening runs client lock cast -> Spell::EffectOpenLock -> Player::SendLoot without ever
+// reading quest status. So the chest stays interactable, hands out an empty loot window,
+// and — when chest.consumable is set — despawns on the loot release, taking it away from
+// the players who still need it.
+//
+// This is what ActivateToQuest already computes for the sparkle; the flag work in
+// BuildValuesUpdate turns the same answer into GO_FLAG_LOCKED | GO_FLAG_NOT_SELECTABLE for
+// that one player, exactly as the chest.groupLootRules branch does for a player outside the
+// loot group. Chests that also hold loot anyone may take (a treasure chest with a quest item
+// mixed in, e.g. 153123 Kim'jael's Equipment) are deliberately left alone.
+bool GameObject::IsQuestChestUnavailableFor(Player* target) const
+{
+    if (!sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE))
+        return false;
+
+    if (GetGoType() != GAMEOBJECT_TYPE_CHEST)
+        return false;
+
+    GameObjectTemplate const* info = GetGOInfo();
+    if (!info->IsGameObjectForQuests())
+        return false;
+
+    // still wanted by one of this player's quests
+    if (ActivateToQuest(target))
+        return false;
+
+    if (LootTemplates_Gameobject.HaveNonQuestLootFor(info->GetLootId()))
+        return false;
+
+    // template addon gold is lootable regardless of quest status
+    if (GameObjectTemplateAddon const* addon = GetTemplateAddon())
+        if (addon->maxgold > 0)
+            return false;
+
+    return true;
+}
+
 void GameObject::TriggeringLinkedGameObject(uint32 trapEntry, Unit* target)
 {
     GameObjectTemplate const* trapInfo = sObjectMgr->GetGameObjectTemplate(trapEntry);
@@ -2740,8 +2780,18 @@ void GameObject::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* t
     if (!target)
         return;
 
-    bool forcedFlags = GetGoType() == GAMEOBJECT_TYPE_CHEST && GetGOInfo()->chest.groupLootRules && HasLootRecipient();
     bool targetIsGM = target->IsGameMaster() && target->GetSession()->IsGMAccount();
+    // A quest chest re-sends GAMEOBJECT_FLAGS on EVERY update for this player, not only
+    // while the lock applies. The lock below is per-player while the stored field never
+    // changes, so nothing dirties the mask on its own: if the field only travelled when
+    // the lock was on, accepting the quest would leave the client holding a stale
+    // GO_FLAG_LOCKED | GO_FLAG_NOT_SELECTABLE and the chest would stay dead. Player quest
+    // transitions run UpdateForQuestWorldObjects (PlayerQuest.cpp:1635/1914/1955), which
+    // rebuilds every visible gameobject for that player, so this lands the moment the
+    // objective fills or the quest is taken.
+    bool questChest = sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE) && GetGoType() == GAMEOBJECT_TYPE_CHEST && GetGOInfo()->IsGameObjectForQuests();
+    bool questChestUnavailable = questChest && !targetIsGM && IsQuestChestUnavailableFor(target);
+    bool forcedFlags = questChest || (GetGoType() == GAMEOBJECT_TYPE_CHEST && GetGOInfo()->chest.groupLootRules && HasLootRecipient());
 
     ByteBuffer fieldBuffer;
 
@@ -2819,6 +2869,11 @@ void GameObject::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* t
             {
                 uint32 goFlags = m_uint32Values[GAMEOBJECT_FLAGS];
                 if (GetGoType() == GAMEOBJECT_TYPE_CHEST && GetGOInfo() && GetGOInfo()->chest.groupLootRules && !IsLootAllowedFor(target))
+                {
+                    goFlags |= GO_FLAG_LOCKED | GO_FLAG_NOT_SELECTABLE;
+                }
+
+                if (questChestUnavailable)
                 {
                     goFlags |= GO_FLAG_LOCKED | GO_FLAG_NOT_SELECTABLE;
                 }

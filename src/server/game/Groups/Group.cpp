@@ -1793,6 +1793,9 @@ void Group::CountTheRoll(Rolls::iterator rollI)
                             for(uint32 i = 0; i < max_slot; i++)
                             {
                                 LootItem* lootItem = loot.LootItemInSlot(i, player);
+                                if (!lootItem || (sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE) && !lootItem->AllowedForPlayer(player, loot.sourceWorldObjectGUID)))
+                                    continue;
+
                                 player->SendEquipError(msg, nullptr, nullptr, lootItem->itemid);
                                 player->SendItemRetrievalMail(lootItem->itemid, lootItem->count);
                             }

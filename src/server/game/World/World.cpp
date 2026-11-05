@@ -815,6 +815,12 @@ void World::SetInitialWorldSettings()
     LOG_INFO("server.loading", "Loading Conditions...");
     sConditionMgr->LoadConditions();
 
+    if (sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE)) // phase_definitions only exists with F-013
+    {
+        LOG_INFO("server.loading", "Loading Phase Definitions...");   // F-194 Cata zone phasing
+        sObjectMgr->LoadPhaseDefinitions();
+    }
+
     LOG_INFO("server.loading", "Loading Faction Change Achievement Pairs...");
     sObjectMgr->LoadFactionChangeAchievements();
 

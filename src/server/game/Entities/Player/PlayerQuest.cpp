@@ -15,8 +15,11 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "CellImpl.h"
 #include "CreatureAI.h"
 #include "DisableMgr.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "GameEventMgr.h"
 #include "GameObjectAI.h"
 #include "GameTime.h"
@@ -25,6 +28,7 @@
 #include "Group.h"
 #include "MapMgr.h"
 #include "Player.h"
+#include "PhaseMgr.h" // F-194 Cata zone phasing
 #include "PoolMgr.h"
 #include "QuestPackets.h"
 #include "ReputationMgr.h"
@@ -642,6 +646,21 @@ void Player::CompleteQuest(uint32 quest_id)
     UpdateAreaDependentAuras(GetAreaId());
     AdditionalSavingAddMask(ADDITIONAL_SAVING_INVENTORY_AND_GOLD | ADDITIONAL_SAVING_QUEST_STATUS);
 
+    // Zeppelin: SMART_EVENT_QUEST_COMPLETED for creatures near the player (e.g. summoned
+    // quest companions reacting to the last objective). Runs after SetQuestStatus, so the
+    // quest state and any spell_area auras are already updated when the event fires.
+    if (qInfo && sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE))
+    {
+        std::list<Unit*> nearby;
+        Acore::AnyUnitInObjectRangeCheck check(this, 150.0f);
+        Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(this, nearby, check);
+        Cell::VisitObjects(this, searcher, 150.0f);
+        for (Unit* nearbyUnit : nearby)
+            if (Creature* creature = nearbyUnit->ToCreature())
+                if (creature->IsAIEnabled)
+                    creature->AI()->sQuestComplete(this, qInfo);
+    }
+
     // check if Quest Tracker is enabled
     if (sWorld->getBoolConfig(CONFIG_QUEST_ENABLE_QUEST_TRACKER))
     {
@@ -901,6 +920,9 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
     UpdateAreaDependentAuras(GetAreaId());
 
     sScriptMgr->OnPlayerCompleteQuest(this, quest);
+
+    if (PhaseMgr* pm = GetPhaseMgr()) // F-194 quest rewarded -> maybe re-phase the zone (world progresses)
+        pm->NotifyConditionChanged();
 }
 
 void Player::SetRewardedQuest(uint32 quest_id)
@@ -1569,6 +1591,9 @@ void Player::SetQuestStatus(uint32 questId, QuestStatus status, bool update /*= 
 
     if (update)
         SendQuestUpdate(questId);
+
+    if (PhaseMgr* pm = GetPhaseMgr()) // F-194 quest state changed -> maybe re-phase the zone
+        pm->NotifyConditionChanged();
 }
 
 void Player::RemoveActiveQuest(uint32 questId, bool update /*= true*/)

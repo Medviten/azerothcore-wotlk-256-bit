@@ -52,6 +52,7 @@ struct VendorItem;
 
 class AchievementMgr;
 class ReputationMgr;
+class PhaseMgr; // F-194 Cata zone phasing
 class Channel;
 class CharacterCreateInfo;
 class Creature;
@@ -1407,6 +1408,8 @@ public:
     CinematicMgr& GetCinematicMgr() { return _cinematicMgr; }
     CinematicMgr const& GetCinematicMgr() const { return _cinematicMgr; }
 
+    PhaseMgr* GetPhaseMgr() { return m_phaseMgr.get(); } // F-194 Cata zone phasing
+
     void UpdateEnchantTime(uint32 time);
     void UpdateSoulboundTradeItems();
     void AddTradeableItem(Item* item);
@@ -2488,6 +2491,9 @@ public:
 
     void SendCinematicStart(uint32 CinematicSequenceId) const;
     void SendMovieStart(uint32 MovieId);
+    // Zeppelin: called from CMSG_COMPLETE_MOVIE when the client reports the movie
+    // triggered by SendMovieStart ended (played through or skipped)
+    void CompletedMovie();
 
     uint32 DoRandomRoll(uint32 minimum, uint32 maximum);
 
@@ -3019,6 +3025,8 @@ private:
     Item* _LoadItem(CharacterDatabaseTransaction trans, uint32 zoneId, uint32 timeDiff, Field* fields);
 
     CinematicMgr _cinematicMgr;
+    std::unique_ptr<PhaseMgr> m_phaseMgr; // F-194 Cata zone phasing progression
+    uint32 _pendingMovieId = 0; // Zeppelin: movie sent via SendMovieStart, awaiting CMSG_COMPLETE_MOVIE; not persisted
 
     typedef GuidSet RefundableItemsSet;
     RefundableItemsSet m_refundableItems;

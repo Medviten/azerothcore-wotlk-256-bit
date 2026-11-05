@@ -197,8 +197,11 @@ enum SMART_EVENT
     SMART_EVENT_WAYPOINT_REACHED         = 108,      // PointId (0: any), pathId (0: any)
     SMART_EVENT_WAYPOINT_ENDED           = 109,      // PointId (0: any), pathId (0: any)
     SMART_EVENT_IS_IN_MELEE_RANGE        = 110,      // min, max, repeatMin, repeatMax, dist, invert (0: false, 1: true)
+    SMART_EVENT_QUEST_ABANDONED          = 111,      // QuestID (0 = any), onlyOwnSummon (1 = only fire if creature is a TempSummon of the abandoning player); fired on creatures near the player
+    SMART_EVENT_QUEST_COMPLETED          = 112,      // QuestID (0 = any), onlyOwnSummon (1 = only fire if creature is a TempSummon of the completing player); fired on creatures near the player when all objectives are done (not hand-in)
+    SMART_EVENT_MOVIE_COMPLETED          = 113,      // MovieID (0 = any); fired on creatures near the player when the client reports a movie (SMSG_TRIGGER_MOVIE) finished playing or was skipped
 
-    SMART_EVENT_AC_END                   = 111
+    SMART_EVENT_AC_END                   = 114
 };
 
 struct SmartEvent
@@ -304,6 +307,17 @@ struct SmartEvent
             uint32 cooldownMin;
             uint32 cooldownMax;
         } quest;
+
+        struct
+        {
+            uint32 quest;
+            SAIBool onlyOwnSummon;
+        } questAbandon;
+
+        struct
+        {
+            uint32 movieId;
+        } movie;
 
         struct
         {
@@ -1954,6 +1968,9 @@ const uint32 SmartAIEventMask[SMART_EVENT_AC_END][2] =
     {SMART_EVENT_WAYPOINT_REACHED,     SMART_SCRIPT_TYPE_MASK_CREATURE },
     {SMART_EVENT_WAYPOINT_ENDED,       SMART_SCRIPT_TYPE_MASK_CREATURE },
     {SMART_EVENT_IS_IN_MELEE_RANGE,         SMART_SCRIPT_TYPE_MASK_CREATURE },
+    {SMART_EVENT_QUEST_ABANDONED,           SMART_SCRIPT_TYPE_MASK_CREATURE },
+    {SMART_EVENT_QUEST_COMPLETED,           SMART_SCRIPT_TYPE_MASK_CREATURE },
+    {SMART_EVENT_MOVIE_COMPLETED,           SMART_SCRIPT_TYPE_MASK_CREATURE },
 };
 
 enum SmartEventFlags

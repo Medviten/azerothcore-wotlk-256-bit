@@ -17,10 +17,14 @@
 
 // This is where scripts' loading functions should be declared:
 // void MyExampleScript()
+void AddSC_zeppelin_goblin_start();
+void AddSC_zeppelin_goblin_creatures();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
 void AddCustomScripts()
 {
     // MyExampleScript()
+    AddSC_zeppelin_goblin_start();
+    AddSC_zeppelin_goblin_creatures();
 }

@@ -17,8 +17,12 @@
 
 #include "Battleground.h"
 #include "BattlegroundAV.h"
+#include "CellImpl.h"
 #include "Chat.h"
+#include "CreatureAI.h"
 #include "GameObjectAI.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "Group.h"
 #include "Language.h"
 #include "Log.h"
@@ -422,6 +426,22 @@ void WorldSession::HandleQuestLogRemoveQuest(WorldPackets::Quest::QuestLogRemove
             _player->RemoveTimedAchievement(ACHIEVEMENT_TIMED_TYPE_QUEST, questId);
 
             sScriptMgr->OnPlayerQuestAbandon(_player, questId);
+
+            // Zeppelin: SMART_EVENT_QUEST_ABANDONED for creatures near the player (e.g. summoned
+            // quest companions). Runs after RemoveActiveQuest, so the quest status and any
+            // spell_area auras are already cleaned up when the event fires.
+            Quest const* quest = sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE) ? sObjectMgr->GetQuestTemplate(questId) : nullptr;
+            if (quest)
+            {
+                std::list<Unit*> nearby;
+                Acore::AnyUnitInObjectRangeCheck check(_player, 150.0f);
+                Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(_player, nearby, check);
+                Cell::VisitObjects(_player, searcher, 150.0f);
+                for (Unit* nearbyUnit : nearby)
+                    if (Creature* creature = nearbyUnit->ToCreature())
+                        if (creature->IsAIEnabled)
+                            creature->AI()->sQuestAbandon(_player, quest);
+            }
 
             LOG_DEBUG("network.opcode", "Player {} abandoned quest {}", _player->GetGUID().ToString(), questId);
             // check if Quest Tracker is enabled

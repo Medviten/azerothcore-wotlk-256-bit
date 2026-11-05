@@ -40,6 +40,7 @@
 #include "Util.h"
 #include "Vehicle.h"
 #include "WorldPacket.h"
+#include "World.h"
 
 /// @todo: this import is not necessary for compilation and marked as unused by the IDE
 //  however, for some reasons removing it would cause a damn linking issue
@@ -5346,6 +5347,11 @@ void AuraEffect::HandleAuraDummy(AuraApplication const* aurApp, uint8 mode, bool
                         finalSpelId = 30104;
                         break;
                 }
+
+                // Zeppelin I-376: custom taming rods name their final tame spell in the rod's own
+                // effect 2 TriggerSpell (unused by the dummy aura), so new rods need no entry above.
+                if (!finalSpelId && sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE))
+                    finalSpelId = GetSpellInfo()->Effects[EFFECT_1].TriggerSpell;
 
                 if (finalSpelId)
                     caster->CastSpell(target, finalSpelId, true, nullptr, this);

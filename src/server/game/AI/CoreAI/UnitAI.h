@@ -425,6 +425,10 @@ public:
     virtual void sQuestSelect(Player* /*player*/, Quest const* /*quest*/) {}
     virtual void sQuestComplete(Player* /*player*/, Quest const* /*quest*/) {}
     virtual void sQuestReward(Player* /*player*/, Quest const* /*quest*/, uint32 /*opt*/) {}
+    // Zeppelin: fired on creatures near a player who abandons a quest (SMART_EVENT_QUEST_ABANDONED)
+    virtual void sQuestAbandon(Player* /*player*/, Quest const* /*quest*/) {}
+    // Zeppelin: fired on creatures near a player whose client reported a movie ended or was skipped (SMART_EVENT_MOVIE_COMPLETED)
+    virtual void sMovieCompleted(Player* /*player*/, uint32 /*movieId*/) {}
     virtual void sOnGameEvent(bool /*start*/, uint16 /*eventId*/) {}
 
     virtual std::string GetDebugInfo() const;

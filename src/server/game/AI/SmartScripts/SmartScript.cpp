@@ -4733,6 +4733,31 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
                 ProcessAction(e, unit, var0);
                 break;
             }
+        case SMART_EVENT_QUEST_ABANDONED:
+        case SMART_EVENT_QUEST_COMPLETED:
+            {
+                if (!unit)
+                    return;
+                if (e.event.questAbandon.quest && var0 != e.event.questAbandon.quest)
+                    return;
+                if (e.event.questAbandon.onlyOwnSummon)
+                {
+                    TempSummon* summon = me ? me->ToTempSummon() : nullptr;
+                    if (!summon || summon->GetSummonerGUID() != unit->GetGUID())
+                        return;
+                }
+                ProcessAction(e, unit, var0);
+                break;
+            }
+        case SMART_EVENT_MOVIE_COMPLETED:
+            {
+                if (!unit)
+                    return;
+                if (e.event.movie.movieId && var0 != e.event.movie.movieId)
+                    return;
+                ProcessAction(e, unit, var0);
+                break;
+            }
         case SMART_EVENT_TRANSPORT_ADDCREATURE:
             {
                 if (e.event.transportAddCreature.creature && var0 != e.event.transportAddCreature.creature)

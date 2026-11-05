@@ -30,6 +30,7 @@
 #include "OutdoorPvPMgr.h"
 #include "Pet.h"
 #include "Player.h"
+#include "PhaseMgr.h" // F-194 Cata zone phasing
 #include "ScriptMgr.h"
 #include "SkillDiscovery.h"
 #include "SpellAuraEffects.h"
@@ -1307,6 +1308,9 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea, bool force)
 
     m_zoneUpdateId    = newZone;
     m_zoneUpdateTimer = ZONE_UPDATE_INTERVAL;
+
+    if (PhaseMgr* pm = GetPhaseMgr()) // F-194 recompute Cata zone phasing on zone change / login
+        pm->NotifyConditionChanged();
 
     // zone changed, so area changed as well, update it
     UpdateArea(newArea);

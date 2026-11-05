@@ -418,6 +418,9 @@ void SmartAIMgr::CheckIfSmartAIInDatabaseExists()
         case SMART_EVENT_GOSSIP_SELECT:
         case SMART_EVENT_ACCEPTED_QUEST:
         case SMART_EVENT_REWARD_QUEST:
+        case SMART_EVENT_QUEST_ABANDONED:
+        case SMART_EVENT_QUEST_COMPLETED:
+        case SMART_EVENT_MOVIE_COMPLETED:
         case SMART_EVENT_FOLLOW_COMPLETED:
         case SMART_EVENT_ON_SPELLCLICK:
         case SMART_EVENT_GO_STATE_CHANGED:
@@ -634,6 +637,9 @@ bool SmartAIMgr::CheckUnusedEventParams(SmartScriptHolder const& e)
             case SMART_EVENT_TARGET_MANA_PCT: return sizeof(SmartEvent::minMaxRepeat);
             case SMART_EVENT_ACCEPTED_QUEST: return sizeof(SmartEvent::quest);
             case SMART_EVENT_REWARD_QUEST: return sizeof(SmartEvent::quest);
+            case SMART_EVENT_QUEST_ABANDONED: return sizeof(SmartEvent::questAbandon);
+            case SMART_EVENT_QUEST_COMPLETED: return sizeof(SmartEvent::questAbandon);
+            case SMART_EVENT_MOVIE_COMPLETED: return sizeof(SmartEvent::movie);
             case SMART_EVENT_REACHED_HOME: return NO_PARAMS;
             case SMART_EVENT_RECEIVE_EMOTE: return sizeof(SmartEvent::emote);
             case SMART_EVENT_HAS_AURA: return sizeof(SmartEvent::aura);
@@ -1251,6 +1257,14 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
                 if (!IsMinMaxValid(e, e.event.quest.cooldownMin, e.event.quest.cooldownMax))
                     return false;
                 break;
+            case SMART_EVENT_QUEST_ABANDONED:
+            case SMART_EVENT_QUEST_COMPLETED:
+                if (e.event.questAbandon.quest && !IsQuestValid(e, e.event.questAbandon.quest))
+                    return false;
+
+                if (!IsSAIBoolValid(e, e.event.questAbandon.onlyOwnSummon))
+                    return false;
+                break;
             case SMART_EVENT_RECEIVE_EMOTE:
                 {
                     if (e.event.emote.emote && !IsTextEmoteValid(e, e.event.emote.emote))
@@ -1493,6 +1507,7 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
             case SMART_EVENT_ON_SPELLCLICK:
             case SMART_EVENT_WAYPOINT_REACHED:
             case SMART_EVENT_WAYPOINT_ENDED:
+            case SMART_EVENT_MOVIE_COMPLETED:
                 break;
             default:
                 LOG_ERROR("sql.sql", "SmartAIMgr: Not handled event_type({}), Entry {} SourceType {} Event {} Action {}, skipped.", e.GetEventType(), e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType());

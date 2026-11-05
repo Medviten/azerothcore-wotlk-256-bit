@@ -27,6 +27,7 @@
 #include "RaceMgr.h"
 #include "ReputationMgr.h"
 #include "ScriptMgr.h"
+#include "World.h"
 #include "ScriptedCreature.h"
 #include "Spell.h"
 #include "SpellAuras.h"
@@ -987,7 +988,8 @@ bool ConditionMgr::CanHaveSourceGroupSet(ConditionSourceType sourceType) const
 {
     return (sourceType == CONDITION_SOURCE_TYPE_CREATURE_LOOT_TEMPLATE || sourceType == CONDITION_SOURCE_TYPE_DISENCHANT_LOOT_TEMPLATE || sourceType == CONDITION_SOURCE_TYPE_FISHING_LOOT_TEMPLATE || sourceType == CONDITION_SOURCE_TYPE_GAMEOBJECT_LOOT_TEMPLATE || sourceType == CONDITION_SOURCE_TYPE_ITEM_LOOT_TEMPLATE || sourceType == CONDITION_SOURCE_TYPE_MAIL_LOOT_TEMPLATE || sourceType == CONDITION_SOURCE_TYPE_MILLING_LOOT_TEMPLATE ||
             sourceType == CONDITION_SOURCE_TYPE_PICKPOCKETING_LOOT_TEMPLATE || sourceType == CONDITION_SOURCE_TYPE_PROSPECTING_LOOT_TEMPLATE || sourceType == CONDITION_SOURCE_TYPE_REFERENCE_LOOT_TEMPLATE || sourceType == CONDITION_SOURCE_TYPE_SKINNING_LOOT_TEMPLATE || sourceType == CONDITION_SOURCE_TYPE_SPELL_LOOT_TEMPLATE || sourceType == CONDITION_SOURCE_TYPE_GOSSIP_MENU || sourceType == CONDITION_SOURCE_TYPE_GOSSIP_MENU_OPTION || sourceType == CONDITION_SOURCE_TYPE_VEHICLE_SPELL || sourceType == CONDITION_SOURCE_TYPE_GOSSIP_HELLO ||
-            sourceType == CONDITION_SOURCE_TYPE_SPELL_IMPLICIT_TARGET || sourceType == CONDITION_SOURCE_TYPE_SPELL_CLICK_EVENT || sourceType == CONDITION_SOURCE_TYPE_SMART_EVENT || sourceType == CONDITION_SOURCE_TYPE_NPC_VENDOR || sourceType == CONDITION_SOURCE_TYPE_PLAYER_LOOT_TEMPLATE || sourceType == CONDITION_SOURCE_TYPE_OBJECT_VISIBILITY);
+            sourceType == CONDITION_SOURCE_TYPE_SPELL_IMPLICIT_TARGET || sourceType == CONDITION_SOURCE_TYPE_SPELL_CLICK_EVENT || sourceType == CONDITION_SOURCE_TYPE_SMART_EVENT || sourceType == CONDITION_SOURCE_TYPE_NPC_VENDOR || sourceType == CONDITION_SOURCE_TYPE_PLAYER_LOOT_TEMPLATE || sourceType == CONDITION_SOURCE_TYPE_OBJECT_VISIBILITY ||
+            sourceType == CONDITION_SOURCE_TYPE_PHASE); // F-194: phase-definition conditions key on SourceGroup = zoneId
 }
 
 bool ConditionMgr::CanHaveSourceIdSet(ConditionSourceType sourceType) const
@@ -1012,6 +1014,16 @@ ConditionList ConditionMgr::GetConditionsForNotGroupedEntry(ConditionSourceType 
         }
     }
     return spellCond;
+}
+
+// F-194 Cata zone phasing: conditions for a phase_definitions (zoneId, entry).
+ConditionList ConditionMgr::GetConditionsForPhaseDefinition(uint32 zoneId, uint32 entry)
+{
+    ConditionList cond;
+    auto itr = PhaseDefinitionConditionStore.find(std::make_pair(zoneId, entry));
+    if (itr != PhaseDefinitionConditionStore.end())
+        cond = itr->second;
+    return cond;
 }
 
 ConditionList ConditionMgr::GetConditionsForSpellClickEvent(uint32 creatureId, uint32 spellId)
@@ -1380,6 +1392,13 @@ void ConditionMgr::LoadConditions(bool isReload)
                 ++count;
                 continue; // do not add to AllocatedMemoryStore to avoid double-deleting
             }
+            case CONDITION_SOURCE_TYPE_PHASE: // F-194 Cata zone phasing: SourceGroup=zoneId, SourceEntry=phase_definition entry
+            {
+                PhaseDefinitionConditionStore[std::make_pair(cond->SourceGroup, uint32(cond->SourceEntry))].push_back(cond);
+                valid = true;
+                ++count;
+                continue; // freed via PhaseDefinitionConditionStore in Clean(), not AllocatedMemoryStore
+            }
             case CONDITION_SOURCE_TYPE_PLAYER_LOOT_TEMPLATE:
             {
                 valid = addToLootTemplate(cond, LootTemplates_Player.GetLootForConditionFill(cond->SourceGroup));
@@ -1577,11 +1596,20 @@ bool ConditionMgr::isSourceTypeValid(Condition* cond)
     switch (cond->SourceType)
     {
     case CONDITION_SOURCE_TYPE_TERRAIN_SWAP:
-    case CONDITION_SOURCE_TYPE_PHASE:
     case CONDITION_SOURCE_TYPE_GRAVEYARD:
     {
         LOG_ERROR("sql.sql", "ConditionSourceType {} in `condition` table is not supported on 3.3.5a, ignoring.", uint32(cond->SourceType));
         return false;
+    }
+    case CONDITION_SOURCE_TYPE_PHASE: // F-194 Cata zone phasing: SourceGroup=zoneId, SourceEntry=phase_definition entry
+    {
+        // no cross-table existence check needed; matched against phase_definitions at runtime by PhaseMgr
+        if (!sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE))
+        {
+            LOG_ERROR("sql.sql", "ConditionSourceType {} in `condition` table is not supported on 3.3.5a, ignoring.", uint32(cond->SourceType));
+            return false;
+        }
+        break;
     }
     case CONDITION_SOURCE_TYPE_CREATURE_LOOT_TEMPLATE:
     {
@@ -2741,6 +2769,15 @@ void ConditionMgr::Clean()
     }
 
     ObjectVisibilityConditionStore.clear();
+
+    // F-194 phase-definition conditions (bucketed, not in AllocatedMemoryStore)
+    for (auto& itr : PhaseDefinitionConditionStore)
+    {
+        for (Condition* cond : itr.second)
+            delete cond;
+        itr.second.clear();
+    }
+    PhaseDefinitionConditionStore.clear();
 
     // this is a BIG hack, feel free to fix it if you can figure out the ConditionMgr ;)
     for (std::list<Condition*>::const_iterator itr = AllocatedMemoryStore.begin(); itr != AllocatedMemoryStore.end(); ++itr) delete *itr;

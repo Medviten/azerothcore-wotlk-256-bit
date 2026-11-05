@@ -8501,6 +8501,48 @@ void ObjectMgr::LoadPointsOfInterest()
     LOG_INFO("server.loading", " ");
 }
 
+// F-194 Cata zone phasing progression: per-zone ordered definitions, gated by
+// CONDITION_SOURCE_TYPE_PHASE conditions on quest state, resolved by PhaseMgr.
+void ObjectMgr::LoadPhaseDefinitions()
+{
+    uint32 oldMSTime = getMSTime();
+    _phaseDefinitionStore.clear();
+
+    //                                                   0       1        2          3        4          5                6
+    QueryResult result = WorldDatabase.Query("SELECT zoneId, entry, phaseMask, phaseId, originmap, terrainswapmap, flags FROM phase_definitions ORDER BY entry ASC");
+    if (!result)
+    {
+        LOG_INFO("server.loading", ">> Loaded 0 phasing definitions. DB table `phase_definitions` is empty.");
+        LOG_INFO("server.loading", " ");
+        return;
+    }
+
+    uint32 count = 0;
+    do
+    {
+        Field* fields = result->Fetch();
+
+        PhaseDefinition pd;
+        pd.zoneId         = fields[0].Get<uint32>();
+        pd.entry          = fields[1].Get<uint32>();
+        pd.phasemask      = fields[2].Get<uint32>();
+        pd.phaseId        = fields[3].Get<uint32>();
+        pd.originmap      = fields[4].Get<uint32>();
+        pd.terrainswapmap = fields[5].Get<uint32>();
+        pd.flags          = uint8(fields[6].Get<uint32>());
+
+        // OVERWRITE + NEGATE is contradictory; keep OVERWRITE (matches TC behaviour)
+        if ((pd.flags & PHASE_FLAG_OVERWRITE_EXISTING) && (pd.flags & PHASE_FLAG_NEGATE_PHASE))
+            pd.flags &= ~PHASE_FLAG_NEGATE_PHASE;
+
+        _phaseDefinitionStore[pd.zoneId].push_back(pd);
+        ++count;
+    } while (result->NextRow());
+
+    LOG_INFO("server.loading", ">> Loaded {} phasing definitions in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", " ");
+}
+
 void ObjectMgr::LoadQuestPOI()
 {
     if (!sWorld->getBoolConfig(CONFIG_QUEST_POI_ENABLED))

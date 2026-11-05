@@ -269,6 +269,7 @@ public:
     [[nodiscard]] bool CanHaveSourceGroupSet(ConditionSourceType sourceType) const;
     [[nodiscard]] bool CanHaveSourceIdSet(ConditionSourceType sourceType) const;
     ConditionList GetConditionsForNotGroupedEntry(ConditionSourceType sourceType, uint32 entry);
+    ConditionList GetConditionsForPhaseDefinition(uint32 zoneId, uint32 entry); // F-194 Cata zone phasing
     ConditionList GetConditionsForSpellClickEvent(uint32 creatureId, uint32 spellId);
     ConditionList GetConditionsForSmartEvent(int32 entryOrGuid, uint32 eventId, uint32 sourceType);
     ConditionList GetConditionsForVehicleSpell(uint32 creatureId, uint32 spellId);
@@ -293,6 +294,7 @@ private:
     NpcVendorConditionContainer        NpcVendorConditionContainerStore;
     SmartEventConditionContainer       SmartEventConditionStore;
     ObjectVisibilityConditionContainer ObjectVisibilityConditionStore;
+    std::map<std::pair<uint32 /*zoneId*/, uint32 /*entry*/>, ConditionList> PhaseDefinitionConditionStore; // F-194
 };
 
 #define sConditionMgr ConditionMgr::instance()

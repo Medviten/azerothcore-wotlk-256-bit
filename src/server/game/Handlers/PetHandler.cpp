@@ -32,6 +32,7 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "Util.h"
+#include "Vehicle.h"
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
@@ -1022,12 +1023,19 @@ void WorldSession::HandlePetCastSpellOpcode(WorldPacket& recvPacket)
     LOG_DEBUG("network", "WORLD: CMSG_PET_CAST_SPELL, guid: {}, castCount: {}, spellId {}, castFlags {}", guid.ToString(), castCount, spellId, castFlags);
 
     // This opcode is also sent from charmed and possessed units (players and creatures)
-    if (!_player->GetGuardianPet() && !_player->GetCharm())
+    if (!_player->GetGuardianPet() && !_player->GetCharm() && !(_player->GetVehicleBase() && sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE)))
         return;
 
     Unit* caster = ObjectAccessor::GetUnit(*_player, guid);
 
-    if (!caster || (caster != _player->GetGuardianPet() && caster != _player->GetCharm()))
+    // Zeppelin (I-311): the bar is also served on uncontrolled CAN_CAST vehicle seats
+    // (Vehicle::AddPassenger) — accept casts from the rider's own vehicle base there.
+    bool uncontrolledVehicleCast = false;
+    if (caster && caster == _player->GetVehicleCreatureBase() && sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE))
+        if (VehicleSeatEntry const* seatInfo = _player->GetVehicle()->GetSeatForPassenger(_player))
+            uncontrolledVehicleCast = (seatInfo->m_flags & VEHICLE_SEAT_FLAG_CAN_CAST) != 0;
+
+    if (!caster || (caster != _player->GetGuardianPet() && caster != _player->GetCharm() && !uncontrolledVehicleCast))
     {
         LOG_ERROR("network.opcode", "HandlePetCastSpellOpcode: Pet {} isn't pet of player {} .", guid.ToString(), GetPlayer()->GetName());
         return;

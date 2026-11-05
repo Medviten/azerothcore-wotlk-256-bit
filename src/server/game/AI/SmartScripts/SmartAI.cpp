@@ -27,6 +27,7 @@
 #include "ScriptMgr.h"
 #include "SpellMgr.h"
 #include "Vehicle.h"
+#include "World.h"
 
 SmartAI::SmartAI(Creature* c) : CreatureAI(c)
 {
@@ -1105,7 +1106,16 @@ void SmartAI::InitializeAI()
     {
         mJustReset = true;
         JustReachedHome();
-        GetScript()->ProcessEventsFor(SMART_EVENT_RESPAWN);
+
+        // Every freshly created creature now has TriggerJustRespawned set (#25482), so
+        // Creature::Update delivers JustRespawned - and with it SMART_EVENT_RESPAWN - on its
+        // first tick. Firing the event here as well would run every respawn action twice, which
+        // is invisible for idempotent actions (flags, morphs, auras) but duplicates anything
+        // that spawns state: a summon on respawn produces two creatures stacked on each other.
+        // Temp summons skip the JustRespawned path (#25533), so they still need the event here.
+        // GoblinStartZone.Enable off keeps the stock double event.
+        if (me->IsSummon() || !sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE))
+            GetScript()->ProcessEventsFor(SMART_EVENT_RESPAWN);
     }
 }
 
@@ -1218,9 +1228,24 @@ void SmartAI::sQuestAccept(Player* player, Quest const* quest)
     GetScript()->ProcessEventsFor(SMART_EVENT_ACCEPTED_QUEST, player, quest->GetQuestId());
 }
 
+void SmartAI::sQuestAbandon(Player* player, Quest const* quest)
+{
+    GetScript()->ProcessEventsFor(SMART_EVENT_QUEST_ABANDONED, player, quest->GetQuestId());
+}
+
+void SmartAI::sQuestComplete(Player* player, Quest const* quest)
+{
+    GetScript()->ProcessEventsFor(SMART_EVENT_QUEST_COMPLETED, player, quest->GetQuestId());
+}
+
 void SmartAI::sQuestReward(Player* player, Quest const* quest, uint32 opt)
 {
     GetScript()->ProcessEventsFor(SMART_EVENT_REWARD_QUEST, player, quest->GetQuestId(), opt);
+}
+
+void SmartAI::sMovieCompleted(Player* player, uint32 movieId)
+{
+    GetScript()->ProcessEventsFor(SMART_EVENT_MOVIE_COMPLETED, player, movieId);
 }
 
 void SmartAI::SetCombatMovement(bool on, bool stopOrStartMovement)

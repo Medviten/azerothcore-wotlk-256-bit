@@ -954,6 +954,14 @@ void WorldSession::HandleNextCinematicCamera(WorldPacket& /*recv_data*/)
     GetPlayer()->GetCinematicMgr().StartCinematicCamera();
 }
 
+void WorldSession::HandleCompleteMovie(WorldPacket& /*recv_data*/)
+{
+    // Zeppelin: sent by the client when the movie triggered by SMSG_TRIGGER_MOVIE ends,
+    // whether it played through or was skipped. The packet carries no payload; the
+    // movie id is remembered by Player::SendMovieStart.
+    GetPlayer()->CompletedMovie();
+}
+
 void WorldSession::HandleSetActionBarToggles(WorldPacket& recv_data)
 {
     uint8 ActionBar;
@@ -1579,6 +1587,15 @@ void WorldSession::HandleRequestPetInfo(WorldPackets::Pet::RequestPetInfo& /*pac
             _player->VehicleSpellInitialize();
         else
             _player->CharmSpellInitialize();
+    }
+    // Zeppelin (I-311): rider of an uncontrolled CAN_CAST vehicle seat — no pet and
+    // no charm carry the bar, so re-serve it here (client-side UI reloads and the
+    // post-boarding resync both land in this opcode).
+    else if (_player->GetVehicleCreatureBase() && sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE))
+    {
+        if (VehicleSeatEntry const* seatInfo = _player->GetVehicle()->GetSeatForPassenger(_player))
+            if (seatInfo->m_flags & VEHICLE_SEAT_FLAG_CAN_CAST)
+                _player->VehicleSpellInitialize();
     }
 }
 

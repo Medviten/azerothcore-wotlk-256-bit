@@ -23,6 +23,7 @@
 #include "Chat.h"
 #include "Common.h"
 #include "Creature.h"
+#include "CreatureAI.h"
 #include "DynamicObject.h"
 #include "Formulas.h"
 #include "GameObject.h"
@@ -6422,7 +6423,11 @@ void Spell::SummonGuardian(uint32 i, uint32 entry, SummonPropertiesEntry const* 
         //    ((Minion*)summon)->SetFollowAngle(unitCaster->GetAngle(summon));
 
         // xinef: move this here, some auras are added in initstatsforlevel!
-        if (!summon->IsInCombat() && !summon->IsTrigger())
+        // Map::SummonCreature() has already run InitSummon() -> AI()->IsSummonedBy(), so an AI that
+        // started an escort in that hook already owns MOTION_SLOT_ACTIVE. Overwriting it with a follow
+        // strands the escort: it keeps STATE_ESCORT_ESCORTING but never gets an ESCORT_MOTION_TYPE
+        // generator back, so it trails the summoner forever instead of walking its path.
+        if (!summon->IsInCombat() && !summon->IsTrigger() && !(sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE) && summon->IsAIEnabled && summon->AI()->IsEscorted()))
         {
             //  summon->AI()->EnterEvadeMode();
             summon->GetMotionMaster()->Clear(false);

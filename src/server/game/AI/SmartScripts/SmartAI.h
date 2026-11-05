@@ -193,8 +193,10 @@ public:
     void sGossipSelectCode(Player* player, uint32 sender, uint32 action, char const* code) override;
     void sQuestAccept(Player* player, Quest const* quest) override;
     //void sQuestSelect(Player* player, Quest const* quest);
-    //void sQuestComplete(Player* player, Quest const* quest);
+    void sQuestComplete(Player* player, Quest const* quest) override;
     void sQuestReward(Player* player, Quest const* quest, uint32 opt) override;
+    void sQuestAbandon(Player* player, Quest const* quest) override;
+    void sMovieCompleted(Player* player, uint32 movieId) override;
     void sOnGameEvent(bool start, uint16 eventId) override;
 
     uint32 mEscortQuestID;

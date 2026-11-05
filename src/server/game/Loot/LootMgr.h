@@ -224,6 +224,8 @@ public:
     [[nodiscard]] bool HaveLootFor(uint32 loot_id) const { return m_LootTemplates.find(loot_id) != m_LootTemplates.end(); }
     [[nodiscard]] bool HaveQuestLootFor(uint32 loot_id) const;
     bool HaveQuestLootForPlayer(uint32 loot_id, Player const* player) const;
+    // True if the template holds anything that is NOT gated behind a quest
+    [[nodiscard]] bool HaveNonQuestLootFor(uint32 loot_id) const;
 
     [[nodiscard]] LootTemplate const* GetLootFor(uint32 loot_id) const;
     [[nodiscard]] LootTemplate* GetLootForConditionFill(uint32 loot_id) const;
@@ -261,6 +263,8 @@ public:
     [[nodiscard]] bool HasQuestDrop(LootTemplateMap const& store) const;
     // True if template includes at least 1 quest drop for an active quest of the player
     bool HasQuestDropForPlayer(LootTemplateMap const& store, Player const* player) const;
+    // True if template includes at least 1 drop that is not gated behind a quest
+    [[nodiscard]] bool HasNonQuestDrop(LootTemplateMap const& store) const;
 
     // Checks integrity of the template
     void Verify(LootStore const& store, uint32 Id) const;

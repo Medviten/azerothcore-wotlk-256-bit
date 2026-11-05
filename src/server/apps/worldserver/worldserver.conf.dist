@@ -1427,6 +1427,27 @@ DontCacheRandomMovementPaths = 0
 ###################################################################################################
 
 ###################################################################################################
+# GOBLIN START ZONE
+#
+#    GoblinStartZone.Enable
+#        Description: Core support for the Zeppelin goblin start zone (WHE modpak F-013):
+#                     zone phasing from the phase_definitions table and phase conditions
+#                     (source type 26), quest chests locked for players who no longer need
+#                     them, loot conditions on auto-stored and rolled loot, the action bar on
+#                     uncontrolled cast-capable vehicle seats, the quest-completed/abandoned
+#                     and movie-completed SmartAI events reaching nearby creatures, a single
+#                     SmartAI respawn event per spawn, escorts started by guardian summons,
+#                     and taming rods naming their tame spell in effect 2.
+#                     Requires the phase_definitions table from F-013 when enabled.
+#        Default:     0 - (Disabled, stock behaviour)
+#                     1 - (Enabled)
+
+GoblinStartZone.Enable = 0
+
+#
+###################################################################################################
+
+###################################################################################################
 # WEATHER
 #
 #    ActivateWeather

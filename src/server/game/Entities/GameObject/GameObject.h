@@ -266,6 +266,8 @@ public:
     [[nodiscard]] bool hasQuest(uint32 quest_id) const override;
     [[nodiscard]] bool hasInvolvedQuest(uint32 quest_id) const override;
     bool ActivateToQuest(Player* target) const;
+    // True for a quest-only chest (every drop it holds is quest gated) that this player has no use for
+    bool IsQuestChestUnavailableFor(Player* target) const;
     void UseDoorOrButton(uint32 time_to_restore = 0, bool alternative = false, Unit* user = nullptr);
     // 0 = use `gameobject`.`spawntimesecs`
     void ResetDoorOrButton();

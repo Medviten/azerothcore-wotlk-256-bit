@@ -41,6 +41,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include "PhaseMgr.h" // F-194 PhaseDefinitionStore
 
 class Item;
 struct DungeonProgressionRequirements;
@@ -1124,6 +1125,10 @@ public:
 
     void LoadVendors();
     void LoadTrainers();
+
+    // F-194 Cata zone phasing progression
+    void LoadPhaseDefinitions();
+    [[nodiscard]] PhaseDefinitionStore const& GetPhaseDefinitionStore() const { return _phaseDefinitionStore; }
     void LoadCreatureDefaultTrainers();
 
     std::string GeneratePetName(uint32 entry);
@@ -1704,6 +1709,8 @@ private:
     AcoreStringContainer _acoreStringStore;
     GossipMenuItemsLocaleContainer _gossipMenuItemsLocaleStore;
     PointOfInterestLocaleContainer _pointOfInterestLocaleStore;
+
+    PhaseDefinitionStore _phaseDefinitionStore; // F-194 zone -> ordered phase definitions
 
     CacheVendorItemContainer _cacheVendorItemStore;
     std::unordered_map<uint32, Trainer::Trainer> _trainers;
