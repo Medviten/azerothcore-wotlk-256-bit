@@ -1061,6 +1061,10 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
 
         if (IsPet())
         {
+            // Custom: WHE F-100, a Hero's pet type comes from the pet, since it can be any class's
+            if (petType == MAX_PET_TYPE && owner->getClass() == CLASS_HERO)
+                petType = cinfo->type == CREATURE_TYPE_BEAST ? HUNTER_PET : SUMMON_PET;
+
             if (petType == MAX_PET_TYPE)
             {
                 // The petType was not overwritten by the hook, continue with default initialization

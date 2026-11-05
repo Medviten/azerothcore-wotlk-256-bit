@@ -94,7 +94,7 @@ int32 ReputationMgr::GetBaseReputation(FactionEntry const* factionEntry) const
         return 0;
 
     RaceMask raceMask = _player->getRaceMask();
-    uint32 classMask = _player->getClassMask();
+    uint32 classMask = _player->getClass() == CLASS_HERO ? uint32(1 << (CLASS_PALADIN - 1)) : _player->getClassMask(); // Custom: WHE F-100, the DBC's rows don't name class 10
     for (int i = 0; i < 4; i++)
     {
         if ((factionEntry->BaseRepRaceMask[i] & raceMask  ||
@@ -148,7 +148,7 @@ uint32 ReputationMgr::GetDefaultStateFlags(FactionEntry const* factionEntry) con
         return 0;
 
     RaceMask raceMask = _player->getRaceMask();
-    uint32 classMask = _player->getClassMask();
+    uint32 classMask = _player->getClass() == CLASS_HERO ? uint32(1 << (CLASS_PALADIN - 1)) : _player->getClassMask(); // Custom: WHE F-100, the DBC's rows don't name class 10
     for (int i = 0; i < 4; i++)
     {
         if ((factionEntry->BaseRepRaceMask[i] & raceMask  ||

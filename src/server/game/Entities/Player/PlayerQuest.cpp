@@ -1129,6 +1129,11 @@ bool Player::SatisfyQuestClass(Quest const* qInfo, bool msg) const
     if (reqClass == 0)
         return true;
 
+    // Custom: WHE F-100. A quest for several classes restricts by gear or role, which doesn't stop a Hero. One for a
+    // single class is that class's own chain, and a Hero buys what it teaches from the trainer instead.
+    if (getClass() == CLASS_HERO && (reqClass & (reqClass - 1)) != 0)
+        return true;
+
     if ((reqClass & getClassMask()) == 0)
     {
         if (msg)

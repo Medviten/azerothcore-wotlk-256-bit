@@ -134,7 +134,7 @@ enum Classes
     CLASS_SHAMAN        = 7, // TITLE Shaman
     CLASS_MAGE          = 8, // TITLE Mage
     CLASS_WARLOCK       = 9, // TITLE Warlock
-    //CLASS_UNK           = 10,
+    CLASS_HERO          = 10, // TITLE Hero
     CLASS_DRUID         = 11 // TITLE Druid
 };
 
@@ -145,7 +145,7 @@ enum Classes
     ((1<<(CLASS_WARRIOR-1))|(1<<(CLASS_PALADIN-1))|(1<<(CLASS_HUNTER-1))| \
     (1<<(CLASS_ROGUE-1))  |(1<<(CLASS_PRIEST-1)) |(1<<(CLASS_SHAMAN-1))| \
     (1<<(CLASS_MAGE-1))   |(1<<(CLASS_WARLOCK-1))|(1<<(CLASS_DRUID-1)) | \
-    (1<<(CLASS_DEATH_KNIGHT-1)))
+    (1<<(CLASS_DEATH_KNIGHT-1))|(1<<(CLASS_HERO-1))) // Custom: WHE F-100, the class that can learn from any trainer
 
 // valid classes for creature_template.unit_class
 #define CLASSMASK_ALL_CREATURES ((1<<(CLASS_WARRIOR-1)) | (1<<(CLASS_PALADIN-1)) | (1<<(CLASS_ROGUE-1)) | (1<<(CLASS_MAGE-1)))

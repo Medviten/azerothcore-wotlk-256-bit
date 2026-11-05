@@ -10119,6 +10119,13 @@ void ObjectMgr::LoadCreatureDefaultTrainers()
     LOG_INFO("server.loading", ">> Loaded {} default trainers in {} ms", _creatureDefaultTrainers.size(), GetMSTimeDiffToNow(oldMSTime));
 }
 
+// Custom: WHE F-100
+Trainer::Trainer const* ObjectMgr::GetTrainerById(uint32 trainerId) const
+{
+    auto itr = _trainers.find(trainerId);
+    return itr != _trainers.end() ? &itr->second : nullptr;
+}
+
 Trainer::Trainer* ObjectMgr::GetTrainer(uint32 creatureId)
 {
     auto itr = _creatureDefaultTrainers.find(creatureId);

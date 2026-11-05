@@ -1132,6 +1132,8 @@ public:
     static bool BuildEnumData(PreparedQueryResult result, WorldPacket* data);
 
     [[nodiscard]] bool IsClass(Classes playerClass, ClassContext context = CLASS_CONTEXT_NONE) const override;
+    // Custom: WHE F-100. Whether a Hero (class 10) counts as playerClass in this context; nullopt = it doesn't
+    [[nodiscard]] Optional<bool> IsClassAsHero(Classes playerClass, ClassContext context) const;
 
     void SetInWater(bool apply);
 
@@ -1823,6 +1825,7 @@ public:
     SkillStatusMap& GetSkillStatusMap() { return mSkillStatus; }
 
     void AddSpellMod(SpellModifier* mod, bool apply);
+    [[nodiscard]] static uint32 GetSpellModFamily(uint32 spellId); // Custom: WHE F-100
     bool IsAffectedBySpellmod(SpellInfo const* spellInfo, SpellModifier* mod, Spell* spell = nullptr);
     bool HasSpellMod(SpellModifier* mod, Spell* spell);
     template <class T>

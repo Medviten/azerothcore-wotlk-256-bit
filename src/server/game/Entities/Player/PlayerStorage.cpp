@@ -2369,7 +2369,8 @@ InventoryResult Player::CanUseItem(ItemTemplate const* proto) const
         return EQUIP_ERR_YOU_CAN_NEVER_USE_THAT_ITEM;
     }
 
-    if ((proto->AllowableClass & getClassMask()) == 0 || !(proto->AllowableRace & getRaceMask()))
+    // Custom: WHE F-100, class-restricted items are open to a Hero
+    if ((getClass() != CLASS_HERO && (proto->AllowableClass & getClassMask()) == 0) || !(proto->AllowableRace & getRaceMask()))
     {
         return EQUIP_ERR_YOU_CAN_NEVER_USE_THAT_ITEM;
     }
@@ -2468,7 +2469,8 @@ InventoryResult Player::CanRollForItemInLFG(ItemTemplate const* proto, WorldObje
     if (proto->HasFlag2(ITEM_FLAG2_EVERYONE_CAN_ROLL_NEED))
         return EQUIP_ERR_OK;
 
-    if ((proto->AllowableClass & getClassMask()) == 0 || !(proto->AllowableRace & getRaceMask()))
+    // Custom: WHE F-100, class-restricted items are open to a Hero
+    if ((getClass() != CLASS_HERO && (proto->AllowableClass & getClassMask()) == 0) || !(proto->AllowableRace & getRaceMask()))
         return EQUIP_ERR_YOU_CAN_NEVER_USE_THAT_ITEM;
 
     if (proto->RequiredSpell != 0 && !HasSpell(proto->RequiredSpell))

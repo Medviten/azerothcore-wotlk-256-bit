@@ -18,6 +18,7 @@
 #include "Trainer.h"
 #include "Creature.h"
 #include "NPCPackets.h"
+#include "ObjectMgr.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "SpellInfo.h"
@@ -43,9 +44,22 @@ namespace Trainer
         trainerList.TrainerGUID = npc->GetGUID();
         trainerList.TrainerType = AsUnderlyingType(_type);
         trainerList.Greeting = GetGreeting(locale);
-        trainerList.Spells.reserve(_spells.size());
+
+        // Custom: WHE F-100, a Hero also sees the spells other classes start with or get from quests
+        std::vector<Spell const*> spells;
+        spells.reserve(_spells.size());
         for (Spell const& trainerSpell : _spells)
+            spells.push_back(&trainerSpell);
+
+        if (Trainer const* heroSpells = GetHeroSpells(player))
+            for (Spell const& trainerSpell : heroSpells->_spells)
+                spells.push_back(&trainerSpell);
+
+        trainerList.Spells.reserve(spells.size());
+        for (Spell const* trainerSpellPtr : spells)
         {
+            Spell const& trainerSpell = *trainerSpellPtr;
+
             if (!player->IsSpellFitByClassAndRace(trainerSpell.SpellId))
                 continue;
 
@@ -86,6 +100,11 @@ namespace Trainer
             return;
 
         Spell const* trainerSpell = GetSpell(spellId);
+
+        // Custom: WHE F-100
+        if (Trainer const* heroSpells = !trainerSpell ? GetHeroSpells(player) : nullptr)
+            trainerSpell = heroSpells->GetSpell(spellId);
+
         if (!trainerSpell)
         {
             SendTeachFailure(npc, player, spellId, FailReason::Unavailable);
@@ -230,7 +249,8 @@ namespace Trainer
             case Type::Class:
             case Type::Pet:
                 // check class for class trainers
-                return player->getClass() == GetTrainerRequirement();
+                // Custom: WHE F-100, a Hero can use any of them
+                return player->getClass() == GetTrainerRequirement() || player->getClass() == CLASS_HERO;
             case Type::Mount:
                 // check race for mount trainers
                 return player->getRace() == GetTrainerRequirement();
@@ -242,6 +262,15 @@ namespace Trainer
         }
 
         return true;
+    }
+
+    Trainer const* Trainer::GetHeroSpells(Player const* player) const
+    {
+        if (player->getClass() != CLASS_HERO || GetTrainerType() != Type::Class || !GetTrainerRequirement())
+            return nullptr;
+
+        // `trainer` rows HERO_SPELLS_TRAINER_BASE + class. They need no creature: the modpak's SQL fills them.
+        return sObjectMgr->GetTrainerById(HERO_SPELLS_TRAINER_BASE + GetTrainerRequirement());
     }
 
     void Trainer::SendTeachFailure(Creature const* npc, Player const* player, uint32 spellId, FailReason reason) const

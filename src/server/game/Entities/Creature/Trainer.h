@@ -28,6 +28,9 @@ class Player;
 
 namespace Trainer
 {
+    // Custom: WHE F-100, see Trainer::GetHeroSpells
+    constexpr uint32 HERO_SPELLS_TRAINER_BASE = 190000;
+
     enum class Type : uint32
     {
         Class = 0,
@@ -76,6 +79,8 @@ namespace Trainer
             [[nodiscard]] Type GetTrainerType() const { return _type; }
             [[nodiscard]] uint32 GetTrainerRequirement() const { return _requirement; }
             bool IsTrainerValidForPlayer(Player const* player) const;
+            // Custom: WHE F-100, the extra spells only a Hero gets from this class's trainers
+            Trainer const* GetHeroSpells(Player const* player) const;
 
             private:
             SpellState GetSpellState(Player const* player, Spell const* trainerSpell) const;

@@ -1357,8 +1357,83 @@ bool Player::IsClass(Classes unitClass, ClassContext context) const
     Optional<bool> scriptResult = sScriptMgr->OnPlayerIsClass(this, unitClass, context);
     if (scriptResult != std::nullopt)
         return *scriptResult;
-    else
-        return (getClass() == unitClass);
+
+    // Custom: WHE F-100, a Hero answers per context rather than as one class
+    if (getClass() == CLASS_HERO)
+        if (Optional<bool> heroResult = IsClassAsHero(unitClass, context))
+            return *heroResult;
+
+    return (getClass() == unitClass);
+}
+
+// Custom: WHE F-100. A Hero can learn every class's spells, but the core's class checks mostly choose one branch out of
+// several, so "yes to everything" would be wrong: answer per context. Modelled on mod-classless-wildcard's OnPlayerIsClass.
+Optional<bool> Player::IsClassAsHero(Classes unitClass, ClassContext context) const
+{
+    switch (context)
+    {
+        // any relic and shields, and need rolls judge armor as a plate wearer's
+        case CLASS_CONTEXT_EQUIP_RELIC:
+        case CLASS_CONTEXT_EQUIP_SHIELDS:
+            return true;
+        case CLASS_CONTEXT_EQUIP_ARMOR_CLASS:
+            return unitClass == CLASS_PALADIN;
+        // The first match of each formula decides: melee is Paladin's, ranged Hunter's, and only feral weapon attack
+        // power reads Druid, because StatSystem's melee chain tests Paladin first and never reaches it.
+        case CLASS_CONTEXT_STATS:
+            return unitClass == CLASS_PALADIN || unitClass == CLASS_HUNTER || unitClass == CLASS_DRUID;
+        // Runes, pick pocket, totem enchants, Righteous Fury and Spirit of Redemption: each is gated again on what the
+        // Hero actually has. Answered for all of them; InitRunes and the rune update must agree on the Death Knight one.
+        case CLASS_CONTEXT_ABILITY:
+            return true;
+        // These pick between aura states that exclude each other (Unit.cpp), so answer from the spells the Hero knows
+        case CLASS_CONTEXT_ABILITY_REACTIVE:
+            switch (unitClass)
+            {
+                case CLASS_ROGUE:
+                    return false;
+                case CLASS_HUNTER:
+                    for (uint32 spellId : { 19306, 20909, 20910, 27067, 48998, 48999 }) // Counterattack
+                        if (HasSpell(spellId))
+                            return true;
+                    return false;
+                case CLASS_WARRIOR:
+                    for (uint32 spellId : { 7384, 7887, 11584, 11585 }) // Overpower
+                        if (HasSpell(spellId))
+                            return true;
+                    return false;
+                default:
+                    return std::nullopt;
+            }
+        // Answered from the pet itself. Without a pet the Death Knight answer has to stay no: LoadPetFromDB refuses
+        // Death Knights without Master of Ghouls, and this is exactly when it asks.
+        case CLASS_CONTEXT_PET:
+        {
+            Pet* pet = GetPet();
+            if (!pet || !pet->GetCreatureTemplate())
+                return unitClass != CLASS_DEATH_KNIGHT;
+
+            uint32 const creatureType = pet->GetCreatureTemplate()->type;
+            switch (unitClass)
+            {
+                case CLASS_WARLOCK:
+                    return creatureType == CREATURE_TYPE_DEMON;
+                case CLASS_DEATH_KNIGHT:
+                    return creatureType == CREATURE_TYPE_UNDEAD;
+                case CLASS_MAGE:
+                    return creatureType == CREATURE_TYPE_ELEMENTAL;
+                case CLASS_HUNTER:
+                    return creatureType == CREATURE_TYPE_BEAST;
+                default:
+                    return std::nullopt;
+            }
+        }
+        // Enslave Demon's AI and class byte fix-up
+        case CLASS_CONTEXT_PET_CHARM:
+            return unitClass == CLASS_WARLOCK;
+        default:
+            return std::nullopt;
+    }
 }
 
 void Player::ToggleAFK()
@@ -2784,8 +2859,12 @@ bool Player::HasActivePowerType(Powers power)
 {
     if (sScriptMgr->OnPlayerHasActivePowerType(this, power))
         return true;
-    else
-        return (getPowerType() == power);
+
+    // Custom: WHE F-100, a Hero keeps every pool its spells can spend alive, not only the one on its power bar
+    if (getClass() == CLASS_HERO && (power == POWER_MANA || power == POWER_RAGE || power == POWER_ENERGY || power == POWER_RUNIC_POWER))
+        return true;
+
+    return (getPowerType() == power);
 }
 
 void Player::SendInitialSpells()
@@ -5311,7 +5390,7 @@ void Player::GetDodgeFromAgility(float& diminishing, float& nondiminishing)
         0.021080f, // Shaman
         0.036587f, // Mage
         0.024211f, // Warlock
-        0.0f,      // ??
+        0.034943f, // Custom: WHE F-100, Hero (Paladin's)
         0.056097f  // Druid
     };
     // Crit/agility to dodge/agility coefficient multipliers; 3.2.0 increased required agility by 15%
@@ -5326,7 +5405,7 @@ void Player::GetDodgeFromAgility(float& diminishing, float& nondiminishing)
         1.60f / 1.15f,  // Shaman
         1.00f / 1.15f,  // Mage
         0.97f / 1.15f,  // Warlock (?)
-        0.0f,           // ??
+        1.00f / 1.15f,  // Custom: WHE F-100, Hero (Paladin's)
         2.00f / 1.15f   // Druid
     };
 
@@ -10121,10 +10200,22 @@ template AC_GAME_API void Player::ApplySpellMod(uint32 spellId, SpellModOp op, i
 template AC_GAME_API void Player::ApplySpellMod(uint32 spellId, SpellModOp op, uint32& basevalue, Spell* spell, bool temporaryPet);
 template AC_GAME_API void Player::ApplySpellMod(uint32 spellId, SpellModOp op, float& basevalue, Spell* spell, bool temporaryPet);
 
+// Custom: WHE F-100, the spell family a modifier belongs to
+uint32 Player::GetSpellModFamily(uint32 spellId)
+{
+    SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+    return spellInfo ? spellInfo->SpellFamilyName : 0;
+}
+
 void Player::AddSpellMod(SpellModifier* mod, bool apply)
 {
     LOG_DEBUG("spells.aura", "Player::AddSpellMod {}", mod->spellId);
     uint16 Opcode = (mod->type == SPELLMOD_FLAT) ? SMSG_SET_FLAT_SPELL_MODIFIER : SMSG_SET_PCT_SPELL_MODIFIER;
+
+    // Custom: WHE F-100. A mask bit only means something within a spell family, and a Hero holds modifiers from all of
+    // them: keep one total per family and tell the client which one, in a field the packet doesn't otherwise have.
+    bool const familyAware = getClass() == CLASS_HERO;
+    uint32 const family = familyAware ? GetSpellModFamily(mod->spellId) : 0;
 
     int i = 0;
     flag96 _mask = 0;
@@ -10139,14 +10230,16 @@ void Player::AddSpellMod(SpellModifier* mod, bool apply)
             int32 val = 0;
             for (SpellModContainer::iterator itr = m_spellMods[mod->op].begin(); itr != m_spellMods[mod->op].end(); ++itr)
             {
-                if ((*itr)->type == mod->type && (*itr)->mask & _mask)
+                if ((*itr)->type == mod->type && (*itr)->mask & _mask && (!familyAware || GetSpellModFamily((*itr)->spellId) == family))
                     val += (*itr)->value;
             }
             val += apply ? mod->value : -(mod->value);
-            WorldPacket data(Opcode, (1 + 1 + 4));
+            WorldPacket data(Opcode, (1 + 1 + 4 + 4));
             data << uint8(eff);
             data << uint8(mod->op);
             data << int32(val);
+            if (familyAware)
+                data << uint32(family);
             SendDirectMessage(&data);
         }
     }
@@ -10947,7 +11040,7 @@ bool Player::BuyItemFromVendorSlot(ObjectGuid vendorguid, uint32 vendorslot, uin
         return false;
     }
 
-    if (!(pProto->AllowableClass & getClassMask()) && pProto->Bonding == BIND_WHEN_PICKED_UP && !IsGameMaster())
+    if (getClass() != CLASS_HERO && !(pProto->AllowableClass & getClassMask()) && pProto->Bonding == BIND_WHEN_PICKED_UP && !IsGameMaster()) // Custom: WHE F-100
     {
         SendBuyError(BUY_ERR_CANT_FIND_ITEM, nullptr, item, 0);
         return false;
@@ -16438,6 +16531,34 @@ uint32 Player::GetSpec(int8 spec)
             specIdx = m_activeSpec;
         else
             specIdx = spec;
+
+        // Custom: WHE F-100, a Hero's talents can be in every class's tabs, so there are no three to walk
+        if (getClass() == CLASS_HERO)
+        {
+            std::unordered_map<uint32, uint32> tabCounts;
+            for (uint32 talentId = 0; talentId < sTalentStore.GetNumRows(); ++talentId)
+            {
+                TalentEntry const* talentInfo = sTalentStore.LookupEntry(talentId);
+                if (!talentInfo)
+                    continue;
+
+                for (int8 rank = MAX_TALENT_RANK - 1; rank >= 0; --rank)
+                {
+                    if (talentInfo->RankID[rank] && HasTalent(talentInfo->RankID[rank], specIdx))
+                    {
+                        uint32 const count = (tabCounts[talentInfo->TalentTab] += rank + 1);
+                        if (count > mostTalentCount)
+                        {
+                            mostTalentCount = count;
+                            mostTalentTabId = talentInfo->TalentTab;
+                        }
+                        break;
+                    }
+                }
+            }
+            return mostTalentTabId;
+        }
+
         // find class talent tabs (all players have 3 talent tabs)
         uint32 const* talentTabIds = GetTalentTabPages(getClass());
 
@@ -16743,6 +16864,7 @@ std::string Player::GetPlayerName()
         case CLASS_SHAMAN:       color = "|cff0070DE"; break;
         case CLASS_WARLOCK:      color = "|cff9482C9"; break;
         case CLASS_WARRIOR:      color = "|cffC79C6E"; break;
+        case CLASS_HERO:         color = "|cffE6CC80"; break; // Custom: WHE F-100
     }
 
     return "|Hplayer:" + name + "|h" + color + name + "|h|r";

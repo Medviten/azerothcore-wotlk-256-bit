@@ -1314,6 +1314,31 @@ void WorldSession::HandlePlayerLoginToCharInWorld(Player* pCurrChar)
                     _mask[i++] = 0;
 
                 _mask[i] = uint32(1) << (eff - (32 * i));
+
+                // Custom: WHE F-100, a Hero gets one total per spell family (see Player::AddSpellMod)
+                if (pCurrChar->getClass() == CLASS_HERO)
+                {
+                    std::map<uint32, int32> familyTotals;
+                    for (auto const& spellMod : spellMods)
+                        if (spellMod->type == modType && spellMod->mask & _mask)
+                            familyTotals[Player::GetSpellModFamily(spellMod->spellId)] += spellMod->value;
+
+                    for (auto const& [family, total] : familyTotals)
+                    {
+                        if (total == 0)
+                            continue;
+
+                        WorldPacket data(Opcode, (1 + 1 + 4 + 4));
+                        data << uint8(eff);
+                        data << uint8(opType);
+                        data << int32(total);
+                        data << uint32(family);
+                        SendPacket(&data);
+                    }
+
+                    continue;
+                }
+
                 int32 val = 0;
                 for (auto const& spellMod : spellMods)
                     if (spellMod->type == modType && spellMod->mask & _mask)

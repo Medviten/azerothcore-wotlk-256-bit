@@ -652,7 +652,8 @@ Spell::Spell(WorldObject* caster, SpellInfo const* info, TriggerCastFlags trigge
     {
         // wand case
         if (m_attackType == RANGED_ATTACK)
-            if ((playerCaster->getClassMask() & CLASSMASK_WAND_USERS) != 0)
+            // Custom: WHE F-100, a Hero shoots any ranged weapon, so test the wand itself
+            if ((playerCaster->getClassMask() & CLASSMASK_WAND_USERS) != 0 || (playerCaster->getClass() == CLASS_HERO && playerCaster->GetWeaponForAttack(RANGED_ATTACK) && playerCaster->GetWeaponForAttack(RANGED_ATTACK)->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_WAND))
                 if (Item* pItem = playerCaster->GetWeaponForAttack(RANGED_ATTACK))
                     m_spellSchoolMask = SpellSchoolMask(1 << pItem->GetTemplate()->Damage[0].DamageType);
     }
@@ -7637,7 +7638,8 @@ SpellCastResult Spell::CheckItems(uint32* param1, uint32* param2)
         {
             if (m_spellInfo->TotemCategory[i] != 0)
             {
-                if (player->HasItemTotemCategory(m_spellInfo->TotemCategory[i]))
+                // Custom: WHE F-100, a Hero has no quest chain to get the shaman's four totems from
+                if (player->HasItemTotemCategory(m_spellInfo->TotemCategory[i]) || (player->getClass() == CLASS_HERO && m_spellInfo->TotemCategory[i] >= 2 && m_spellInfo->TotemCategory[i] <= 5))
                 {
                     TotemCategory -= 1;
                     continue;

@@ -395,6 +395,10 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
         if (IsClass(CLASS_PALADIN, CLASS_CONTEXT_STATS) || IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_STATS) || IsClass(CLASS_WARRIOR, CLASS_CONTEXT_STATS))
         {
             val2 = level * 3.0f + GetStat(STAT_STRENGTH) * 2.0f - 20.0f;
+
+            // Custom: WHE F-100, Agility is worth attack power too, or a rogue or hunter build gets nothing from it
+            if (getClass() == CLASS_HERO)
+                val2 += GetStat(STAT_AGILITY);
         }
         else if (IsClass(CLASS_HUNTER, CLASS_CONTEXT_STATS) || IsClass(CLASS_SHAMAN, CLASS_CONTEXT_STATS) || IsClass(CLASS_ROGUE, CLASS_CONTEXT_STATS))
         {
@@ -719,7 +723,7 @@ const float m_diminishing_k[MAX_CLASSES] =
     0.9880f,  // Shaman
     0.9830f,  // Mage
     0.9830f,  // Warlock
-    0.0f,     // ??
+    0.9560f,  // Custom: WHE F-100, Hero (Paladin's)
     0.9720f   // Druid
 };
 
@@ -736,7 +740,7 @@ float Player::GetMissPercentageFromDefence() const
         16.00f,     // Shaman  //?
         16.00f,     // Mage    //?
         16.00f,     // Warlock //?
-        0.0f,       // ??
+        16.00f,     // Custom: WHE F-100, Hero
         16.00f      // Druid   //?
     };
 
@@ -763,7 +767,7 @@ void Player::UpdateParryPercentage()
         145.560408f,    // Shaman
         0.0f,           // Mage
         0.0f,           // Warlock
-        0.0f,           // ??
+        47.003525f,     // Custom: WHE F-100, Hero (Paladin's)
         0.0f            // Druid
     };
 
@@ -809,7 +813,7 @@ void Player::UpdateDodgePercentage()
         145.560408f,    // Shaman
         150.375940f,    // Mage
         150.375940f,    // Warlock
-        0.0f,           // ??
+        88.129021f,     // Custom: WHE F-100, Hero (Paladin's)
         116.890707f     // Druid
     };
 
