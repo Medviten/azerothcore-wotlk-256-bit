@@ -169,6 +169,8 @@ bool PathGenerator::CalculatePath(float x, float y, float z, float destX, float 
 
     _forceDestination = forceDest;
 
+    SelectNavMesh(start, dest);
+
     // make sure navMesh works - we can run on map w/o mmap
     // check if the start and end point have a .mmtile loaded (can we pass via not loaded tile on the way?)
     Unit const* _sourceUnit = _source->ToUnit();
@@ -833,6 +835,57 @@ NavTerrain PathGenerator::GetNavTerrain(float x, float y, float z) const
             return NAV_MAGMA;
         default:
             return NAV_GROUND;
+    }
+}
+
+// I-385: a unit in a terrain-swap phase walks the swap map's navmesh (the ground the client draws)
+// when that navmesh covers both ends of the path; otherwise the map's own.
+void PathGenerator::SelectNavMesh(G3D::Vector3 const& startPos, G3D::Vector3 const& endPos)
+{
+    Map* map = _source->GetMap();
+    MMapData& mmapData = map->GetMapCollisionData().GetMMapData();
+    _navMesh = mmapData.GetNavMesh();
+    _navMeshQuery = mmapData.GetNavMeshQuery();
+
+    uint32 const swapMapId = map->GetTerrainSwapMapId(_source->GetPhaseMask());
+    if (!swapMapId)
+        return;
+
+    dtNavMesh const* swapNavMesh = mmapData.GetSwapNavMesh(swapMapId);
+    if (!swapNavMesh)
+        return;
+
+    dtNavMesh const* baseNavMesh = _navMesh;
+    dtNavMeshQuery const* baseQuery = _navMeshQuery;
+    _navMesh = swapNavMesh;
+    if (!HaveTile(startPos) || !HaveTile(endPos))
+    {
+        _navMesh = baseNavMesh;
+        return;
+    }
+
+    // A swap tile is no proof the swap mesh holds the unit's floor: anything walkable that is not
+    // in the vmaps it was built with is a hole (phase-only WMOs such as the Phase2 town; the
+    // Gallywix Labor Mine while the staging linked the wrong vmtiles). Planning there leaves the
+    // creature unable to reach anyone and it evades every pull. Use the swap mesh only when it
+    // has floor right at both ends; height and LoS stay base anyway.
+    dtNavMeshQuery const* swapQuery = mmapData.GetSwapNavMeshQuery(swapMapId);
+    auto onFloor = [&](G3D::Vector3 const& p)
+    {
+        float const point[VERTEX_SIZE] = { p.y, p.z, p.x };
+        float const extents[VERTEX_SIZE] = { 3.0f, 5.0f, 3.0f };
+        float closest[VERTEX_SIZE];
+        dtPolyRef ref = INVALID_POLYREF;
+        return swapQuery && dtStatusSucceed(swapQuery->findNearestPoly(point, extents, &_filter, &ref, closest)) &&
+            ref != INVALID_POLYREF;
+    };
+
+    if (onFloor(startPos) && onFloor(endPos))
+        _navMeshQuery = swapQuery;
+    else
+    {
+        _navMesh = baseNavMesh;
+        _navMeshQuery = baseQuery;
     }
 }
 

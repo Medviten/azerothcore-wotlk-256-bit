@@ -21,6 +21,8 @@
 #include "GridCell.h"
 #include "GridReference.h"
 #include <memory>
+#include <utility>
+#include <vector>
 
 class GridTerrainData;
 
@@ -102,6 +104,17 @@ public:
     std::shared_ptr<GridTerrainData> GetTerrainDataSharedPtr() { return _terrainData; }
     void SetTerrainData(std::shared_ptr<GridTerrainData> terrainData) { _terrainData = terrainData; }
 
+    // I-385 terrain swap: this grid's terrain on a swap map (phase_definitions.terrainswapmap)
+    GridTerrainData* GetSwapTerrainData(uint32 swapMapId) const
+    {
+        for (auto const& [mapId, terrainData] : _swapTerrainData)
+            if (mapId == swapMapId)
+                return terrainData.get();
+        return nullptr;
+    }
+    bool HasSwapTerrainData() const { return !_swapTerrainData.empty(); }
+    void AddSwapTerrainData(uint32 swapMapId, std::shared_ptr<GridTerrainData> terrainData) { _swapTerrainData.emplace_back(swapMapId, std::move(terrainData)); }
+
     uint32 GetCreatedCellsCount()
     {
         uint32 count = 0;
@@ -150,6 +163,7 @@ private:
 
     // Instances will share a copy of the parent maps terrainData
     std::shared_ptr<GridTerrainData> _terrainData;
+    std::vector<std::pair<uint32 /*swapMapId*/, std::shared_ptr<GridTerrainData>>> _swapTerrainData; // I-385
 };
 
 #endif

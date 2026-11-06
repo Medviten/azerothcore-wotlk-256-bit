@@ -35,6 +35,7 @@ public:
 
 private:
     void LoadMap();
+    void LoadSwapMaps(); // I-385
     void LoadVMap();
     void LoadMMap();
 

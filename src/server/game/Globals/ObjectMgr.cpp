@@ -8539,6 +8539,29 @@ void ObjectMgr::LoadPhaseDefinitions()
         ++count;
     } while (result->NextRow());
 
+    // I-385: server terrain swap rules, per map of each zone that swaps terrain
+    _terrainSwapStore.clear();
+    for (auto const& [zoneId, definitions] : _phaseDefinitionStore)
+    {
+        if (std::none_of(definitions.begin(), definitions.end(), [](PhaseDefinition const& pd) { return pd.terrainswapmap != 0; }))
+            continue;
+
+        AreaTableEntry const* zone = sAreaTableStore.LookupEntry(zoneId);
+        if (!zone)
+        {
+            LOG_ERROR("sql.sql", "Table `phase_definitions` zone {} has a terrainswapmap but is not in AreaTable.dbc, terrain swap ignored.", zoneId);
+            continue;
+        }
+
+        TerrainSwapInfo& info = _terrainSwapStore[zone->mapid];
+        for (PhaseDefinition const& pd : definitions)
+        {
+            info.rules.push_back({ pd.phasemask, pd.terrainswapmap });
+            if (pd.terrainswapmap && std::find(info.swapMapIds.begin(), info.swapMapIds.end(), pd.terrainswapmap) == info.swapMapIds.end())
+                info.swapMapIds.push_back(pd.terrainswapmap);
+        }
+    }
+
     LOG_INFO("server.loading", ">> Loaded {} phasing definitions in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 }

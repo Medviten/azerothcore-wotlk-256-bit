@@ -2,6 +2,7 @@
 #include "IVMapMgr.h"
 #include "Map.h"
 #include "MMapMgr.h"
+#include "ObjectMgr.h"
 #include "ScriptMgr.h"
 #include "VMapFactory.h"
 #include "VMapMgr2.h"
@@ -9,6 +10,7 @@
 void GridTerrainLoader::LoadTerrain()
 {
     LoadMap();
+    LoadSwapMaps();
 
     if (_map->GetInstanceId() == 0)
     {
@@ -45,6 +47,33 @@ void GridTerrainLoader::LoadMap()
     }
 
     sScriptMgr->OnLoadGridMap(_map, _grid.GetTerrainData(), _grid.GetX(), _grid.GetY());
+}
+
+// I-385: load this grid's terrain on each swap map of this map (maps/<swap><gx><gy>.map), if shipped.
+// A grid with no swap file keeps base terrain in every phase. Instances (no world map swaps today)
+// are not given overlays.
+void GridTerrainLoader::LoadSwapMaps()
+{
+    if (_map->GetInstanceId() != 0)
+        return;
+
+    TerrainSwapInfo const* swapInfo = sObjectMgr->GetTerrainSwapInfo(_map->GetId());
+    if (!swapInfo)
+        return;
+
+    for (uint32 swapMapId : swapInfo->swapMapIds)
+    {
+        std::string const mapFileName = Acore::StringFormat("{}maps/{:03}{:02}{:02}.map", sWorld->GetDataPath(), swapMapId, _grid.GetX(), _grid.GetY());
+        std::shared_ptr<GridTerrainData> terrainData = std::make_shared<GridTerrainData>();
+        TerrainMapDataReadResult loadResult = terrainData->Load(mapFileName);
+        if (loadResult == TerrainMapDataReadResult::Success)
+        {
+            _grid.AddSwapTerrainData(swapMapId, std::move(terrainData));
+            LOG_DEBUG("maps", "Loaded swap terrain {} for map {} grid [{},{}]", mapFileName, _map->GetId(), _grid.GetX(), _grid.GetY());
+        }
+        else if (loadResult != TerrainMapDataReadResult::NotFound)
+            LOG_ERROR("maps", "Error (result: {}) loading swap terrain file: {}", uint32(loadResult), mapFileName);
+    }
 }
 
 void GridTerrainLoader::LoadVMap()

@@ -1137,6 +1137,39 @@ GridTerrainData* Map::GetGridTerrainData(float x, float y)
     return GetGridTerrainData(gridCoord);
 }
 
+// I-385: server half of the terrain swap. The client draws a swap map's tiles for phases in
+// phase_definitions.terrainswapmap (ALE ZepTerrain.lua); ground/liquid/area for an object in such a
+// phase must come from the same tiles, or anything that moves walks the base terrain.
+// Grids only carry swap tiles when this map has swap rules, so the grid check gates the rule lookup.
+GridTerrainData* Map::GetGridTerrainData(uint32 phaseMask, float x, float y)
+{
+    GridCoord const gridCoord = Acore::ComputeGridCoord(x, y);
+    if (!MapGridManager::IsValidGridCoordinates(gridCoord.x_coord, gridCoord.y_coord))
+        return nullptr;
+
+    EnsureGridCreated(gridCoord);
+    MapGridType* grid = _mapGridManager.GetGrid(gridCoord.x_coord, gridCoord.y_coord);
+    if (grid->HasSwapTerrainData())
+        if (uint32 swapMapId = GetTerrainSwapMapId(phaseMask))
+            if (GridTerrainData* swapTerrain = grid->GetSwapTerrainData(swapMapId))
+                return swapTerrain;
+
+    return grid->GetTerrainData();
+}
+
+// Looked up, never cached: pooling (PoolMgr::LoadFromDB) creates the continent maps before
+// LoadPhaseDefinitions builds the rules, so a value taken in the constructor is always empty.
+TerrainSwapInfo const* Map::GetTerrainSwapInfo() const
+{
+    return sObjectMgr->GetTerrainSwapInfo(GetId());
+}
+
+uint32 Map::GetTerrainSwapMapId(uint32 phaseMask) const
+{
+    TerrainSwapInfo const* swapInfo = GetTerrainSwapInfo();
+    return swapInfo ? swapInfo->Resolve(phaseMask) : 0;
+}
+
 float Map::GetWaterOrGroundLevel(uint32 phasemask, float x, float y, float z, float* ground /*= nullptr*/, bool /*swim = false*/, float collisionHeight) const
 {
     // we need ground level (including grid height version) for proper return water level in point
@@ -1187,9 +1220,15 @@ Transport* Map::GetTransportForPos(uint32 phase, float x, float y, float z, Worl
 
 float Map::GetHeight(float x, float y, float z, bool checkVMap /*= true*/, float maxSearchDist /*= DEFAULT_HEIGHT_SEARCH*/) const
 {
+    return GetStaticHeight(PHASEMASK_NORMAL, x, y, z, checkVMap, maxSearchDist);
+}
+
+// .map + static vmap height for an object of this phasemask (I-385: the .map part follows the terrain swap)
+float Map::GetStaticHeight(uint32 phaseMask, float x, float y, float z, bool checkVMap, float maxSearchDist) const
+{
     // find raw .map surface under Z coordinates
     float mapHeight = VMAP_INVALID_HEIGHT_VALUE;
-    float gridHeight = GetGridHeight(x, y);
+    float gridHeight = GetGridHeight(phaseMask, x, y);
     if (G3D::fuzzyGe(z, gridHeight - GROUND_HEIGHT_TOLERANCE))
         mapHeight = gridHeight;
 
@@ -1222,6 +1261,14 @@ float Map::GetHeight(float x, float y, float z, bool checkVMap /*= true*/, float
 float Map::GetGridHeight(float x, float y) const
 {
     if (GridTerrainData* gmap = const_cast<Map*>(this)->GetGridTerrainData(x, y))
+        return gmap->getHeight(x, y);
+
+    return INVALID_HEIGHT;
+}
+
+float Map::GetGridHeight(uint32 phaseMask, float x, float y) const
+{
+    if (GridTerrainData* gmap = const_cast<Map*>(this)->GetGridTerrainData(phaseMask, x, y))
         return gmap->getHeight(x, y);
 
     return INVALID_HEIGHT;
@@ -1265,7 +1312,7 @@ bool Map::GetAreaInfo(uint32 phaseMask, float x, float y, float z, uint32& flags
     if (hasVmapAreaInfo || hasDynamicAreaInfo)
     {
         // check if there's terrain between player height and object height
-        if (GridTerrainData* gmap = const_cast<Map*>(this)->GetGridTerrainData(x, y))
+        if (GridTerrainData* gmap = const_cast<Map*>(this)->GetGridTerrainData(phaseMask, x, y))
         {
             float mapHeight = gmap->getHeight(x, y);
             // z + 2.0f condition taken from GetHeight(), not sure if it's such a great choice...
@@ -1288,7 +1335,7 @@ uint32 Map::GetAreaId(uint32 phaseMask, float x, float y, float z) const
 
     uint32 gridAreaId    = 0;
     float  gridMapHeight = INVALID_HEIGHT;
-    if (GridTerrainData* gmap = const_cast<Map*>(this)->GetGridTerrainData(x, y))
+    if (GridTerrainData* gmap = const_cast<Map*>(this)->GetGridTerrainData(phaseMask, x, y))
     {
         gridAreaId    = gmap->getArea(x, y);
         gridMapHeight = gmap->getHeight(x, y);
@@ -1396,7 +1443,7 @@ LiquidData const Map::GetLiquidData(uint32 phaseMask, float x, float y, float z,
 
     if (useGridLiquid)
     {
-        if (GridTerrainData* gmap = const_cast<Map*>(this)->GetGridTerrainData(x, y))
+        if (GridTerrainData* gmap = const_cast<Map*>(this)->GetGridTerrainData(phaseMask, x, y))
         {
             LiquidData const& map_data = gmap->GetLiquidData(x, y, z, collisionHeight, ReqLiquidType);
             // Not override LIQUID_MAP_ABOVE_WATER with LIQUID_MAP_NO_WATER:
@@ -1418,7 +1465,7 @@ LiquidData const Map::GetLiquidData(uint32 phaseMask, float x, float y, float z,
 
 void Map::GetFullTerrainStatusForPosition(uint32 phaseMask, float x, float y, float z, float collisionHeight, PositionFullTerrainStatus& data, Optional<uint8> reqLiquidType)
 {
-    GridTerrainData* gmap = GetGridTerrainData(x, y);
+    GridTerrainData* gmap = GetGridTerrainData(phaseMask, x, y);
 
     VMAP::AreaAndLiquidData vmapData;
     VMAP::AreaAndLiquidData dynData;
@@ -1607,7 +1654,7 @@ bool Map::isInLineOfSight(float x1, float y1, float z1, float x2, float y2, floa
 float Map::GetHeight(uint32 phasemask, float x, float y, float z, bool vmap/*=true*/, float maxSearchDist /*= DEFAULT_HEIGHT_SEARCH*/) const
 {
     float h1, h2;
-    h1 = GetHeight(x, y, z, vmap, maxSearchDist);
+    h1 = GetStaticHeight(phasemask, x, y, z, vmap, maxSearchDist);
     h2 = _mapCollisionData.GetDynamicTree().getHeight(x, y, z, maxSearchDist, phasemask);
     return std::max<float>(h1, h2);
 }
@@ -3536,7 +3583,7 @@ bool Map::CheckCollisionAndGetValidCoords(WorldObject const* source, float start
     if (groundZ <= INVALID_HEIGHT && unit && !unit->CanFly())
     {
         // fall back to gridHeight if any
-        float gridHeight = GetGridHeight(destX, destY);
+        float gridHeight = GetGridHeight(source->GetPhaseMask(), destX, destY);
         if (gridHeight > INVALID_HEIGHT)
         {
             destZ = gridHeight + unit->GetHoverHeight();

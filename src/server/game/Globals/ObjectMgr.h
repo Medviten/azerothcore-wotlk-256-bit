@@ -1129,6 +1129,11 @@ public:
     // F-194 Cata zone phasing progression
     void LoadPhaseDefinitions();
     [[nodiscard]] PhaseDefinitionStore const& GetPhaseDefinitionStore() const { return _phaseDefinitionStore; }
+    [[nodiscard]] TerrainSwapInfo const* GetTerrainSwapInfo(uint32 mapId) const // I-385
+    {
+        auto itr = _terrainSwapStore.find(mapId);
+        return itr != _terrainSwapStore.end() ? &itr->second : nullptr;
+    }
     void LoadCreatureDefaultTrainers();
 
     std::string GeneratePetName(uint32 entry);
@@ -1711,6 +1716,7 @@ private:
     PointOfInterestLocaleContainer _pointOfInterestLocaleStore;
 
     PhaseDefinitionStore _phaseDefinitionStore; // F-194 zone -> ordered phase definitions
+    TerrainSwapStore _terrainSwapStore;         // I-385 map -> server terrain swap rules
 
     CacheVendorItemContainer _cacheVendorItemStore;
     std::unordered_map<uint32, Trainer::Trainer> _trainers;

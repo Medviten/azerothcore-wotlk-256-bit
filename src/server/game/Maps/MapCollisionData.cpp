@@ -21,6 +21,7 @@
 #include "MapCollisionData.h"
 #include "MapTree.h"
 #include "ModelInstance.h"
+#include "ObjectMgr.h"
 #include "VMapFactory.h"
 #include "VMapMgr2.h"
 #include "World.h"
@@ -29,7 +30,7 @@
 #include <G3D/Vector3.h>
 
 MapCollisionData::MapCollisionData(Map const& map, Map const* parentMap) :
-    _map(map), _staticVMapData(map.GetId())
+    _map(map), _isBaseMap(parentMap == nullptr), _staticVMapData(map.GetId())
 {
     if (parentMap)
     {
@@ -49,6 +50,21 @@ MapCollisionData::MapCollisionData(Map const& map, Map const* parentMap) :
     }
 }
 
+// I-385: terrain-swap navmeshes (mmaps/<swap>.mmap, built over this map's tile coords). Not in the
+// constructor: pooling creates the continent maps before LoadPhaseDefinitions has built the rules.
+// Grids (and so tiles) are only created once the world is loaded, so the first tile is late enough.
+void MapCollisionData::LoadSwapNavMeshes()
+{
+    _mmapData._swapNavMeshesLoaded = true;
+    if (!_isBaseMap)
+        return;
+
+    if (TerrainSwapInfo const* swapInfo = sObjectMgr->GetTerrainSwapInfo(_map.GetId()))
+        for (uint32 swapMapId : swapInfo->swapMapIds)
+            if (std::shared_ptr<dtNavMesh> navMesh = MMAP::MMapMgr::LoadNavMesh(swapMapId))
+                _mmapData._swapNavMeshes.push_back({ swapMapId, std::move(navMesh), nullptr });
+}
+
 int MapCollisionData::LoadVMapTile(uint32 tileX, uint32 tileY)
 {
     if (!VMAP::VMapFactory::createOrGetVMapMgr()->isMapLoadingEnabled() || !_staticVMapData._staticTree)
@@ -64,6 +80,13 @@ int MapCollisionData::LoadMMapTile(uint32 tileX, uint32 tileY)
 {
     if (!DisableMgr::IsPathfindingEnabled(&_map) || !_mmapData._navMesh)
         return MMAP::MMAP_LOAD_RESULT_IGNORED;
+
+    // I-385: a swap navmesh only has tiles where its map was built (the island), so a miss is normal
+    if (!_mmapData._swapNavMeshesLoaded)
+        LoadSwapNavMeshes();
+
+    for (MMapData::SwapNavMesh& swap : _mmapData._swapNavMeshes)
+        MMAP::MMapMgr::LoadTile(swap.navMesh.get(), swap.mapId, tileX, tileY);
 
     return MMAP::MMapMgr::LoadTile(_mmapData._navMesh.get(), _map.GetId(), tileX, tileY);
 }
@@ -180,4 +203,29 @@ dtNavMeshQuery const* MMapData::GetNavMeshQuery()
         _navMeshQuery = MMAP::MMapMgr::CreateNavMeshQuery(_navMesh.get());
 
     return _navMeshQuery.get();
+}
+
+dtNavMesh const* MMapData::GetSwapNavMesh(uint32 swapMapId) const
+{
+    for (SwapNavMesh const& swap : _swapNavMeshes)
+        if (swap.mapId == swapMapId)
+            return swap.navMesh.get();
+
+    return nullptr;
+}
+
+dtNavMeshQuery const* MMapData::GetSwapNavMeshQuery(uint32 swapMapId)
+{
+    for (SwapNavMesh& swap : _swapNavMeshes)
+    {
+        if (swap.mapId != swapMapId)
+            continue;
+
+        if (!swap.navMeshQuery)
+            swap.navMeshQuery = MMAP::MMapMgr::CreateNavMeshQuery(swap.navMesh.get());
+
+        return swap.navMeshQuery.get();
+    }
+
+    return nullptr;
 }

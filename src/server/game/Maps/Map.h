@@ -65,6 +65,7 @@ class InstanceMap;
 class BattlegroundMap;
 class Transport;
 class StaticTransport;
+struct TerrainSwapInfo;
 class MotionTransport;
 class PathGenerator;
 class WorldSession;
@@ -230,6 +231,10 @@ public:
     std::shared_ptr<GridTerrainData> GetGridTerrainDataSharedPtr(GridCoord const& gridCoord);
     GridTerrainData* GetGridTerrainData(GridCoord const& gridCoord);
     GridTerrainData* GetGridTerrainData(float x, float y);
+    // I-385: the terrain an object with this phasemask stands on (a swap map's grid where one is shipped)
+    GridTerrainData* GetGridTerrainData(uint32 phaseMask, float x, float y);
+    [[nodiscard]] uint32 GetTerrainSwapMapId(uint32 phaseMask) const;
+    [[nodiscard]] TerrainSwapInfo const* GetTerrainSwapInfo() const;
 
     [[nodiscard]] uint32 GetId() const { return i_mapEntry->MapID; }
 
@@ -244,6 +249,7 @@ public:
     [[nodiscard]] float GetHeight(float x, float y, float z, bool checkVMap = true, float maxSearchDist = DEFAULT_HEIGHT_SEARCH) const;
     [[nodiscard]] float GetHeight(Position const& pos, bool checkVMap = true, float maxSearchDist = DEFAULT_HEIGHT_SEARCH) const { return GetHeight(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), checkVMap, maxSearchDist); }
     [[nodiscard]] float GetGridHeight(float x, float y) const;
+    [[nodiscard]] float GetGridHeight(uint32 phaseMask, float x, float y) const; // I-385
     [[nodiscard]] float GetMinHeight(float x, float y) const;
     Transport* GetTransportForPos(uint32 phase, float x, float y, float z, WorldObject* worldobject = nullptr);
 
@@ -576,6 +582,7 @@ public:
     MapCollisionData const& GetMapCollisionData()  const { return _mapCollisionData; }
 
 private:
+    [[nodiscard]] float GetStaticHeight(uint32 phaseMask, float x, float y, float z, bool checkVMap, float maxSearchDist) const; // I-385
 
     template<class T> void InitializeObject(T* obj);
     void AddCreatureToMoveList(Creature* c);

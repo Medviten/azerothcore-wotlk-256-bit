@@ -180,6 +180,7 @@ class PathGenerator
         dtPolyRef GetPathPolyByPosition(dtPolyRef const* polyPath, uint32 polyPathSize, float const* Point, float* Distance = nullptr) const;
         dtPolyRef GetPolyByLocation(float const* Point, float* Distance) const;
         [[nodiscard]] bool HaveTile(G3D::Vector3 const& p) const;
+        void SelectNavMesh(G3D::Vector3 const& startPos, G3D::Vector3 const& endPos); // I-385
 
         void BuildPolyPath(G3D::Vector3 const& startPos, G3D::Vector3 const& endPos);
         void BuildPointPath(float const* startPoint, float const* endPoint);

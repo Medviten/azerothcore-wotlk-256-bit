@@ -22,6 +22,8 @@
 #include "MapTree.h"
 #include "MMapMgr.h"
 #include "IVMapMgr.h"
+#include <memory>
+#include <vector>
 
 class Map;
 
@@ -62,11 +64,24 @@ public:
     dtNavMesh const* GetNavMesh() const { return _navMesh.get(); }
     dtNavMeshQuery const* GetNavMeshQuery();
 
+    // I-385: navmesh of a terrain-swap map (phase_definitions.terrainswapmap), tiles in this map's coords
+    dtNavMesh const* GetSwapNavMesh(uint32 swapMapId) const;
+    dtNavMeshQuery const* GetSwapNavMeshQuery(uint32 swapMapId);
+
 protected:
     // _navMesh is a shared_ptr as it will point to a parent maps nav mesh (if exists) to save on memory
     std::shared_ptr<dtNavMesh> _navMesh;
     // navMeshQuery is not thread safe and needs its own instance per map
     MMAP::ManagedNavMeshQuery _navMeshQuery;
+
+    struct SwapNavMesh
+    {
+        uint32 mapId;
+        std::shared_ptr<dtNavMesh> navMesh;
+        MMAP::ManagedNavMeshQuery navMeshQuery;
+    };
+    std::vector<SwapNavMesh> _swapNavMeshes; // I-385, base maps only
+    bool _swapNavMeshesLoaded = false;        // loaded with the first tile, see LoadMMapTile
 };
 
 // Map collision data holders (dynamic&static vmap, mmaps)
@@ -78,6 +93,7 @@ public:
 
     int LoadVMapTile(uint32 tileX, uint32 tileY);
     int LoadMMapTile(uint32 tileX, uint32 tileY);
+    void LoadSwapNavMeshes(); // I-385
 
     DynamicVMapCollisionData& GetDynamicTree() { return _dynamicVMapData; }
     DynamicVMapCollisionData const& GetDynamicTree() const { return _dynamicVMapData; }
@@ -91,6 +107,7 @@ public:
 
 private:
     Map const& _map;
+    bool _isBaseMap;
 
     DynamicVMapCollisionData _dynamicVMapData;
     StaticVMapCollisionData _staticVMapData;
