@@ -22,6 +22,7 @@
 #include "ObjectMgr.h"
 #include "Opcodes.h"
 #include "Player.h"
+#include "RaceMgr.h"
 #include "ScriptMgr.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
@@ -427,9 +428,8 @@ void WorldSession::HandleItemQuerySingleOpcode(WorldPacket& recvData)
         queryData << pProto->SellPrice;
         queryData << pProto->InventoryType;
         queryData << pProto->AllowableClass;
-        // 256-bit race mask, 8 uint32 (wowdecomp-256-bit client)
-        for (uint32 i = 0; i < RaceMask::FIELD_COUNT; ++i)
-            queryData << pProto->AllowableRace.GetChunk32(i);
+        // Custom: race mask, 8 uint32 (256-bit) or the stock 1, as RaceMgr::GetPacketRaceMaskFields() says
+        RaceMgr::WritePacketRaceMask(queryData, pProto->AllowableRace);
         queryData << pProto->ItemLevel;
         queryData << pProto->RequiredLevel;
         queryData << pProto->RequiredSkill;

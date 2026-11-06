@@ -26,6 +26,7 @@
 #include "WorldPacket.h"
 #include "World.h"
 #include "WorldSession.h"
+#include <array>
 
 uint16 RaceMgr::_maxRaces = 0;
 
@@ -34,6 +35,33 @@ RaceMask RaceMgr::_allianceRaceMask;
 RaceMask RaceMgr::_hordeRaceMask;
 RaceMask RaceMgr::_maleOnlyRaceMask;
 std::unordered_map<uint8, RaceMgr::RaceTemplate> RaceMgr::_raceTemplates;
+uint32 RaceMgr::_dbcRaceMaskBits = 256;
+
+uint32 RaceMgr::GetPacketRaceMaskFields()
+{
+    uint32 bits = sWorld->getIntConfig(CONFIG_RACE_MASK_PACKET_BITS);
+    if (bits != 32 && bits != 256)
+        bits = _dbcRaceMaskBits;
+
+    return bits == 32 ? 1 : RaceMask::FIELD_COUNT;
+}
+
+void RaceMgr::WritePacketRaceMask(WorldPacket& data, RaceMask const& mask)
+{
+    uint32 const fields = GetPacketRaceMaskFields();
+    for (uint32 i = 0; i < fields; ++i)
+        data << mask.GetChunk32(i);
+}
+
+RaceMask RaceMgr::ReadPacketRaceMask(WorldPacket& data)
+{
+    std::array<uint32, RaceMask::FIELD_COUNT> chunks = {};
+    uint32 const fields = GetPacketRaceMaskFields();
+    for (uint32 i = 0; i < fields; ++i)
+        data >> chunks[i];
+
+    return RaceMask::FromChunks32({ chunks[0], chunks[1], chunks[2], chunks[3], chunks[4], chunks[5], chunks[6], chunks[7] });
+}
 
 RaceMgr::RaceMgr()
 {

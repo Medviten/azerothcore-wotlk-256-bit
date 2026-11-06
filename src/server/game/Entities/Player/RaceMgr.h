@@ -68,6 +68,14 @@ public:
     static uint8 GetLookalikeRace(uint8 race);
     /// Whether a race's shapeshift forms follow skin (fur) color instead of hair color.
     static bool UsesSkinColorForms(uint8 race);
+
+    /// Custom: the race mask layout of the loaded DBCs (32 or 256), set by LoadDBCStores()
+    static void SetDBCRaceMaskBits(uint32 bits) { _dbcRaceMaskBits = bits; }
+    /// Custom: uint32 fields per race mask in the item query and who packets: RaceMask.PacketBits, or the DBCs' layout
+    /// (the matching client reads the same DBCs). 1 is the stock layout, RaceMask::FIELD_COUNT the 256-bit one.
+    static uint32 GetPacketRaceMaskFields();
+    static void WritePacketRaceMask(WorldPacket& data, RaceMask const& mask);
+    static RaceMask ReadPacketRaceMask(WorldPacket& data);
 private:
     struct RaceTemplate
     {
@@ -83,6 +91,7 @@ private:
     static RaceMask _hordeRaceMask;
     static RaceMask _maleOnlyRaceMask;
     static std::unordered_map<uint8, RaceTemplate> _raceTemplates;
+    static uint32 _dbcRaceMaskBits;
 };
 
 #define sRaceMgr RaceMgr::instance()

@@ -18,7 +18,7 @@
 #include "DBCStore.h"
 #include "DBCDatabaseLoader.h"
 
-DBCStorageBase::DBCStorageBase(char const* fmt) : _fieldCount(0), _fileFormat(fmt), _dataTable(nullptr), _indexTableSize(0)
+DBCStorageBase::DBCStorageBase(char const* fmt) : _fieldCount(0), _fileFormat(fmt), _dataTable(nullptr), _indexTableSize(0), _stockRaceMasks(false)
 {
 }
 
@@ -36,10 +36,12 @@ bool DBCStorageBase::Load(char const* path, char**& indexTable)
     DBCFileLoader dbc;
 
     // Check if load was sucessful, only then continue
-    if (!dbc.Load(path, _fileFormat))
+    // Custom: a stock DBC with race masks is widened to the 256-bit layout (see SetRaceMaskFields())
+    if (!dbc.Load(path, _fileFormat, &_raceMaskFields))
         return false;
 
     _fieldCount = dbc.GetCols();
+    _stockRaceMasks = dbc.WidenedRaceMasks();
 
     // load raw non-string data
     _dataTable = dbc.AutoProduceData(_fileFormat, _indexTableSize, indexTable);
@@ -61,7 +63,7 @@ bool DBCStorageBase::LoadStringsFrom(char const* path, char** indexTable)
     DBCFileLoader dbc;
 
     // Check if load was successful, only then continue
-    if (!dbc.Load(path, _fileFormat))
+    if (!dbc.Load(path, _fileFormat, &_raceMaskFields)) // Custom: as in Load()
         return false;
 
     // load strings from another locale dbc data

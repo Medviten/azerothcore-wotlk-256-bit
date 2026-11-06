@@ -44,6 +44,7 @@
 #include "OutdoorPvP.h"
 #include "Pet.h"
 #include "Player.h"
+#include "RaceMgr.h"
 #include "ScriptMgr.h"
 #include "SocialMgr.h"
 #include "Spell.h"
@@ -224,7 +225,6 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
     uint32 matchCount = 0;
 
     uint32 levelMin, levelMax, classmask, zonesCount, strCount;
-    std::array<uint32, RaceMask::FIELD_COUNT> raceChunks = {};
     std::array<uint32, 10> zoneids = {};                    // 10 is client limit
     std::string packetPlayerName, packetGuildName;
 
@@ -234,11 +234,8 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
 
     recvData >> packetGuildName;                            // guild name, case sensitive...
 
-    // race mask, 8 uint32, bit = race id (wowdecomp-256-bit client)
-    for (uint32& chunk : raceChunks)
-        recvData >> chunk;
-    RaceMask racemask = RaceMask::FromChunks32({ raceChunks[0], raceChunks[1], raceChunks[2], raceChunks[3],
-        raceChunks[4], raceChunks[5], raceChunks[6], raceChunks[7] });
+    // Custom: race mask, bit = race id: 8 uint32 (256-bit) or the stock 1, as RaceMgr::GetPacketRaceMaskFields() says
+    RaceMask racemask = RaceMgr::ReadPacketRaceMask(recvData);
     recvData >> classmask;                                  // class mask
     recvData >> zonesCount;                                 // zones count, client limit = 10 (2.0.10)
 

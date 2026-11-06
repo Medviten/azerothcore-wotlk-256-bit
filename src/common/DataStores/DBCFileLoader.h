@@ -21,6 +21,7 @@
 #include "Define.h"
 #include "Errors.h"
 #include "Utilities/ByteConverter.h"
+#include <vector>
 
 enum DbcFieldFormat
 {
@@ -41,7 +42,9 @@ public:
     DBCFileLoader();
     ~DBCFileLoader();
 
-    bool Load(char const* filename, char const* fmt);
+    /// Custom: raceMaskFields lists the fields of fmt where each 256-bit race mask (8 fields) starts. A stock DBC, with
+    /// one field per race mask instead, is widened to that layout as it is read (see WidenedRaceMasks()).
+    bool Load(char const* filename, char const* fmt, std::vector<uint32> const* raceMaskFields = nullptr);
 
     class Record
     {
@@ -92,6 +95,8 @@ public:
     [[nodiscard]] uint32 GetCols() const { return fieldCount; }
     [[nodiscard]] uint32 GetOffset(std::size_t id) const { return (fieldsOffset != nullptr && id < fieldCount) ? fieldsOffset[id] : 0; }
     [[nodiscard]] bool IsLoaded() const { return data != nullptr; }
+    /// Custom: whether the file had stock 32-bit race masks, widened by Load()
+    [[nodiscard]] bool WidenedRaceMasks() const { return widenedRaceMasks; }
     char* AutoProduceData(char const* fmt, uint32& count, char**& indexTable);
     char* AutoProduceStrings(char const* fmt, char* dataTable);
     static uint32 GetFormatRecordSize(char const* format, int32* index_pos = nullptr);
@@ -104,6 +109,7 @@ private:
     uint32* fieldsOffset;
     unsigned char* data;
     unsigned char* stringTable;
+    bool widenedRaceMasks;
 
     DBCFileLoader(DBCFileLoader const& right) = delete;
     DBCFileLoader& operator=(DBCFileLoader const& right) = delete;

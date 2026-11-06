@@ -34,6 +34,11 @@ public:
     [[nodiscard]] char const* GetFormat() const { return _fileFormat; }
     [[nodiscard]] uint32 GetFieldCount() const { return _fieldCount; }
 
+    /// Custom: the format fields where each 256-bit race mask starts, so a stock DBC (one field per mask) loads too
+    void SetRaceMaskFields(std::vector<uint32> fields) { _raceMaskFields = std::move(fields); }
+    /// Custom: whether the DBC file had stock 32-bit race masks
+    [[nodiscard]] bool HasStockRaceMasks() const { return _stockRaceMasks; }
+
     virtual bool Load(char const* path) = 0;
     virtual bool LoadStringsFrom(char const* path) = 0;
     virtual void LoadFromDB(char const* table, char const* format) = 0;
@@ -48,6 +53,8 @@ protected:
     char* _dataTable;
     std::vector<char*> _stringPool;
     uint32 _indexTableSize;
+    std::vector<uint32> _raceMaskFields; // Custom: see SetRaceMaskFields()
+    bool _stockRaceMasks;
 };
 
 template <class T>

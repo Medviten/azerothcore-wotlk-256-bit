@@ -19,9 +19,38 @@
 #include "Errors.h"
 #include <string.h>
 
-DBCFileLoader::DBCFileLoader() : recordSize(0), recordCount(0), fieldCount(0), stringSize(0), fieldsOffset(nullptr), data(nullptr), stringTable(nullptr) { }
+DBCFileLoader::DBCFileLoader() : recordSize(0), recordCount(0), fieldCount(0), stringSize(0), fieldsOffset(nullptr), data(nullptr), stringTable(nullptr), widenedRaceMasks(false) { }
 
-bool DBCFileLoader::Load(char const* filename, char const* fmt)
+// Custom: fields of a 256-bit race mask in a DBC (RaceMask::FIELD_COUNT; common cannot include RaceMask.h)
+static constexpr uint32 RACE_MASK_DBC_FIELDS = 8;
+
+// Custom: whether a file of fieldCount fields and recordSize bytes is the stock layout of fmt, i.e. has one field per
+// race mask where fmt has RACE_MASK_DBC_FIELDS (all of them 4-byte fields, as in every DBC with race masks)
+static bool IsStockRaceMaskLayout(char const* fmt, std::vector<uint32> const* raceMaskFields, uint32 fieldCount, uint32 recordSize)
+{
+    if (!raceMaskFields || raceMaskFields->empty())
+        return false;
+
+    std::size_t const formatFields = strlen(fmt);
+    uint32 previousEnd = 0;
+
+    for (uint32 start : *raceMaskFields)
+    {
+        if (start < previousEnd || start + RACE_MASK_DBC_FIELDS > formatFields)
+            return false;
+
+        for (uint32 i = 1; i < RACE_MASK_DBC_FIELDS; ++i)
+            if (fmt[start + i] != fmt[start])
+                return false;
+
+        previousEnd = start + RACE_MASK_DBC_FIELDS;
+    }
+
+    std::size_t const stockFields = formatFields - raceMaskFields->size() * (RACE_MASK_DBC_FIELDS - 1);
+    return fieldCount == stockFields && recordSize == fieldCount * sizeof(uint32);
+}
+
+bool DBCFileLoader::Load(char const* filename, char const* fmt, std::vector<uint32> const* raceMaskFields)
 {
     uint32 header;
     if (data)
@@ -29,6 +58,10 @@ bool DBCFileLoader::Load(char const* filename, char const* fmt)
         delete [] data;
         data = nullptr;
     }
+
+    delete[] fieldsOffset;
+    fieldsOffset = nullptr;
+    widenedRaceMasks = false;
 
     FILE* f = fopen(filename, "rb");
     if (!f)
@@ -82,6 +115,15 @@ bool DBCFileLoader::Load(char const* filename, char const* fmt)
 
     EndianConvert(stringSize);
 
+    // Custom: a stock DBC is read in its own layout and widened to fmt's 256-bit race masks below
+    uint32 const fileRecordSize = recordSize;
+    widenedRaceMasks = IsStockRaceMaskLayout(fmt, raceMaskFields, fieldCount, recordSize);
+    if (widenedRaceMasks)
+    {
+        fieldCount = uint32(strlen(fmt));
+        recordSize = fieldCount * sizeof(uint32);
+    }
+
     fieldsOffset = new uint32[fieldCount];
     fieldsOffset[0] = 0;
 
@@ -101,13 +143,51 @@ bool DBCFileLoader::Load(char const* filename, char const* fmt)
     data = new unsigned char[recordSize * recordCount + stringSize];
     stringTable = data + recordSize * recordCount;
 
-    if (fread(data, recordSize * recordCount + stringSize, 1, f) != 1)
+    if (!widenedRaceMasks)
+    {
+        if (fread(data, recordSize * recordCount + stringSize, 1, f) != 1)
+        {
+            fclose(f);
+            return false;
+        }
+
+        fclose(f);
+        return true;
+    }
+
+    // Custom: copy each stock record field by field; a race mask keeps its value as its first (races 1-32) field and
+    // gets RACE_MASK_DBC_FIELDS - 1 zero fields after it, as DBCTool-256-bit converts stock DBCs
+    std::vector<unsigned char> fileData(std::size_t(fileRecordSize) * recordCount);
+    if ((!fileData.empty() && fread(fileData.data(), fileData.size(), 1, f) != 1) || (stringSize && fread(stringTable, stringSize, 1, f) != 1))
     {
         fclose(f);
         return false;
     }
 
     fclose(f);
+
+    memset(data, 0, std::size_t(recordSize) * recordCount);
+
+    for (uint32 r = 0; r < recordCount; ++r)
+    {
+        unsigned char const* src = fileData.data() + std::size_t(r) * fileRecordSize;
+        unsigned char* dst = data + std::size_t(r) * recordSize;
+        std::size_t mask = 0;
+        uint32 srcField = 0;
+
+        for (uint32 field = 0; field < fieldCount; ++srcField)
+        {
+            memcpy(dst + field * sizeof(uint32), src + srcField * sizeof(uint32), sizeof(uint32));
+
+            if (mask < raceMaskFields->size() && (*raceMaskFields)[mask] == field)
+            {
+                field += RACE_MASK_DBC_FIELDS;
+                ++mask;
+            }
+            else
+                ++field;
+        }
+    }
 
     return true;
 }

@@ -2036,6 +2036,18 @@ CharacterCreating.Disabled = 0
 CharacterCreating.Disabled.RaceMask = 0
 
 #
+#    RaceMask.PacketBits
+#        Description: Race mask layout of item queries and /who requests: 32 is the stock client's (races 1-32),
+#                     256 the wowdecomp-256-bit client's. The DBC files' race masks may be in either layout and
+#                     are detected per file; the client must use the same layout as the server's packets.
+#        Default:     0   - (Follow the DBCs: 256 if Faction, SkillLineAbility, SkillRaceClassInfo or TalentTab.dbc
+#                            is 256-bit, else 32)
+#                     32  - (Stock layout)
+#                     256 - (256-bit layout)
+
+RaceMask.PacketBits = 0
+
+#
 #    CharacterCreating.Disabled.ClassMask
 #        Description: Mask of classes which cannot be created by players.
 #        Example:     288 - (32 + 256, Death Knight and Warlock classes are disabled)

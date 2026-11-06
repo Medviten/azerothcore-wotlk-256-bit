@@ -22,6 +22,7 @@
 #include "Errors.h"
 #include "LFGMgr.h"
 #include "Log.h"
+#include "RaceMgr.h"
 #include "SharedDefines.h"
 #include "SpellMgr.h"
 #include "TransportMgr.h"
@@ -273,6 +274,12 @@ void LoadDBCStores(std::string const& dataPath)
 
 #define LOAD_DBC(store, file, dbtable) LoadDBC(availableDbcLocales, bad_dbc_files, store, dbcPath, file, dbtable)
 
+    // Custom: where each 256-bit race mask starts in these formats (DBCfmt.h), so the stock 32-bit DBCs load too
+    sFactionStore.SetRaceMaskFields({ 2, 10, 18, 26 });
+    sSkillLineAbilityStore.SetRaceMaskFields({ 3 });
+    sSkillRaceClassInfoStore.SetRaceMaskFields({ 2 });
+    sTalentTabStore.SetRaceMaskFields({ 19 });
+
     LOAD_DBC(sAreaTableStore,                       "AreaTable.dbc",                        "areatable_dbc");
     LOAD_DBC(sAchievementStore,                     "Achievement.dbc",                      "achievement_dbc");
     LOAD_DBC(sAchievementCategoryStore,             "Achievement_Category.dbc",             "achievement_category_dbc");
@@ -389,6 +396,20 @@ void LoadDBCStores(std::string const& dataPath)
     LOAD_DBC(sWorldMapOverlayStore,                 "WorldMapOverlay.dbc",                  "worldmapoverlay_dbc");
 
 #undef LOAD_DBC
+
+    // Custom: packets carry race masks in the layout of the DBCs: 256-bit if any of them is (see RaceMgr)
+    {
+        bool const stock = sFactionStore.HasStockRaceMasks() || sSkillLineAbilityStore.HasStockRaceMasks()
+            || sSkillRaceClassInfoStore.HasStockRaceMasks() || sTalentTabStore.HasStockRaceMasks();
+        bool const wide = !sFactionStore.HasStockRaceMasks() || !sSkillLineAbilityStore.HasStockRaceMasks()
+            || !sSkillRaceClassInfoStore.HasStockRaceMasks() || !sTalentTabStore.HasStockRaceMasks();
+
+        if (stock && wide)
+            LOG_WARN("server.loading", ">> Race-mask DBCs mix the stock 32-bit and the 256-bit layout; packets use 256-bit race masks.");
+
+        RaceMgr::SetDBCRaceMaskBits(wide ? 256 : 32);
+        LOG_INFO("server.loading", ">> Race-mask DBCs are {}-bit", wide ? 256 : 32);
+    }
 
     for (CharStartOutfitEntry const* outfit : sCharStartOutfitStore)
         sCharStartOutfitMap[outfit->Race | (outfit->Class << 8) | (outfit->Gender << 16)] = outfit;

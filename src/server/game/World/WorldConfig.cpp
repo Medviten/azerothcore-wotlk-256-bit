@@ -227,6 +227,7 @@ void WorldConfig::BuildConfigCache()
 
     SetConfigValue<uint32>(CONFIG_CHARACTER_CREATING_DISABLED, "CharacterCreating.Disabled", 0);
     SetConfigValue<std::string>(CONFIG_CHARACTER_CREATING_DISABLED_RACEMASK, "CharacterCreating.Disabled.RaceMask", "0");
+    SetConfigValue<uint32>(CONFIG_RACE_MASK_PACKET_BITS, "RaceMask.PacketBits", 0, ConfigValueCache::Reloadable::Yes, [](uint32 const& value) { return value == 0 || value == 32 || value == 256; }, "0, 32 or 256");
 
     SetConfigValue<uint32>(CONFIG_CHARACTER_CREATING_DISABLED_CLASSMASK, "CharacterCreating.Disabled.ClassMask", 0);
 
