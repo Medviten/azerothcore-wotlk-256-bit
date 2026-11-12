@@ -19,6 +19,7 @@
 // void MyExampleScript()
 void AddSC_zeppelin_goblin_start();
 void AddSC_zeppelin_goblin_creatures();
+void AddSC_gilneas_start(); // Custom: F-130 Gilneas start zone
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -27,4 +28,5 @@ void AddCustomScripts()
     // MyExampleScript()
     AddSC_zeppelin_goblin_start();
     AddSC_zeppelin_goblin_creatures();
+    AddSC_gilneas_start();
 }

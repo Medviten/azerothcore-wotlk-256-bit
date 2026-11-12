@@ -1445,6 +1445,18 @@ DontCacheRandomMovementPaths = 0
 GoblinStartZone.Enable = 0
 
 #
+#    GilneasStartZone.Enable
+#        Description: Core support for the Gilneas (Worgen) start zone (WHE modpak F-130): its
+#                     scripted NPCs and vehicles, and the Worgen curse being reapplied on login
+#                     in the stocks of Greymane Manor. Enabling it also enables everything
+#                     GoblinStartZone.Enable does, which the zone relies on, so it requires the
+#                     phase_definitions table (from F-130 or F-013) too.
+#        Default:     0 - (Disabled, stock behaviour)
+#                     1 - (Enabled)
+
+GilneasStartZone.Enable = 0
+
+#
 ###################################################################################################
 
 ###################################################################################################

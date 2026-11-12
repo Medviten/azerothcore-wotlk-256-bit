@@ -194,6 +194,11 @@ void World::LoadConfigSettings(bool reload)
 
     _worldConfig.Initialize(reload);
 
+    // F-130: the Gilneas start zone runs on the core support GoblinStartZone.Enable switches on (zone phasing,
+    // phase conditions, vehicle bars, quest/movie SmartAI events...), so enabling it enables that too
+    if (getBoolConfig(CONFIG_GILNEAS_START_ZONE))
+        setBoolConfig(CONFIG_GOBLIN_START_ZONE, true);
+
     for (uint8 i = 0; i < MAX_MOVE_TYPE; ++i)
         playerBaseMoveSpeed[i] = baseMoveSpeed[i] * getRate(RATE_MOVESPEED_PLAYER);
 
