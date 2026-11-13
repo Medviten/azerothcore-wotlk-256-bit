@@ -20,6 +20,7 @@
 #include "MotionMaster.h"
 #include "MoveSpline.h"
 #include "ObjectAccessor.h"
+#include "ObjectMgr.h"
 #include "Player.h"
 #include "PlayerScript.h"
 #include "ScriptedCreature.h"
@@ -453,6 +454,81 @@ public:
             if (krennan->GetOwnerGUID() == player->GetGUID())
                 return;
         player->CastSpell(player, SPELL_CURSE_OF_THE_WORGEN, true);
+    }
+};
+
+/* Worgen start as humans, as in Cataclysm: until "Last Stand" is rewarded they wear Human Form and lack their racials
+ * (the modpak leaves F-024's racial skill line rows to Death Knights). Last Stand's reward, whose cutscene turns them,
+ * takes the aura off and teaches Viciousness, Aberration, Flayer and Darkflight. Two Forms comes later from q24593,
+ * Running Wild at level 20 (src/Worgoblin.cpp). A Worgen found outside Gilneas without Last Stand (a bot, or a
+ * character from before the zone) is turned there and taught Two Forms too. Worgen are whoever may take Last Stand,
+ * so no race id is needed. */
+enum WorgenCurse
+{
+    SPELL_HUMAN_FORM_MALE           = 68994,  // @SpellHumanFormMale
+    SPELL_HUMAN_FORM_FEMALE         = 110020, // @SpellHumanFormFemale
+    SPELL_TWO_FORMS                 = 68996,  // @SpellTwoFormsMale
+    ZONE_GILNEAS                    = 4714,
+    ZONE_GILNEAS_CITY               = 4755,
+};
+
+// @SpellViciousness, @SpellAberration, @SpellFlayer, @SpellDarkflight
+static uint32 const WorgenRacials[] = { 68975, 68976, 68978, 68992 };
+
+class WorgenCursePlayerScript : public PlayerScript
+{
+public:
+    WorgenCursePlayerScript() : PlayerScript("WorgenCursePlayerScript",
+        { PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_UPDATE_ZONE, PLAYERHOOK_ON_PLAYER_COMPLETE_QUEST }) { }
+
+    void OnPlayerLogin(Player* player) override { Update(player, player->GetZoneId()); }
+
+    void OnPlayerUpdateZone(Player* player, uint32 newZone, uint32 /*newArea*/) override { Update(player, newZone); }
+
+    void OnPlayerCompleteQuest(Player* player, Quest const* quest) override
+    {
+        if (quest->GetQuestId() == QUEST_LAST_STAND && IsUnturnedWorgenClass(player))
+            Turn(player);
+    }
+
+private:
+    static bool IsUnturnedWorgenClass(Player* player)
+    {
+        if (!sWorld->getBoolConfig(CONFIG_GILNEAS_START_ZONE) || player->getClass() == CLASS_DEATH_KNIGHT)
+            return false;
+        Quest const* lastStand = sObjectMgr->GetQuestTemplate(QUEST_LAST_STAND);
+        return lastStand && player->SatisfyQuestRace(lastStand, false);
+    }
+
+    static void Update(Player* player, uint32 zone)
+    {
+        if (!IsUnturnedWorgenClass(player))
+            return;
+        if (player->GetQuestRewardStatus(QUEST_LAST_STAND))
+        {
+            Turn(player);
+            return;
+        }
+        if (zone != ZONE_GILNEAS && zone != ZONE_GILNEAS_CITY)
+        {
+            // skipped Gilneas, so q24593 won't teach Two Forms either
+            Turn(player);
+            if (!player->HasSpell(SPELL_TWO_FORMS))
+                player->learnSpell(SPELL_TWO_FORMS);
+            return;
+        }
+        uint32 humanForm = player->getGender() == GENDER_FEMALE ? SPELL_HUMAN_FORM_FEMALE : SPELL_HUMAN_FORM_MALE;
+        if (!player->HasAura(humanForm))
+            player->CastSpell(player, humanForm, true);
+    }
+
+    static void Turn(Player* player)
+    {
+        player->RemoveAurasDueToSpell(SPELL_HUMAN_FORM_MALE);
+        player->RemoveAurasDueToSpell(SPELL_HUMAN_FORM_FEMALE);
+        for (uint32 spell : WorgenRacials)
+            if (!player->HasSpell(spell))
+                player->learnSpell(spell);
     }
 };
 
@@ -1493,6 +1569,7 @@ void AddSC_gilneas_start()
     RegisterCreatureAI(npc_gilnean_mastiff_pet);
     RegisterCreatureAI(npc_king_greymanes_horse);
     new StocksPlayerScript();
+    new WorgenCursePlayerScript();
     RegisterCreatureAI(npc_crowleys_horse_vehicle);
     RegisterCreatureAI(npc_crowleys_horse_spellclick);
     RegisterCreatureAI(npc_drowning_watchtman_spellclick);
