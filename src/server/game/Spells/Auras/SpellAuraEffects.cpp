@@ -31,6 +31,7 @@
 #include "Opcodes.h"
 #include "OutdoorPvPMgr.h"
 #include "Pet.h"
+#include "PhaseMgr.h" // Custom: F-134
 #include "Player.h"
 #include "ReputationMgr.h"
 #include "ScriptMgr.h"
@@ -1929,6 +1930,14 @@ void AuraEffect::HandlePhase(AuraApplication const* aurApp, uint8 mode, bool app
 
     if (Player* player = target->ToPlayer())
     {
+        // Custom: F-134, in a phase_definitions zone the zone's phases and the aura phases are merged there
+        if (PhaseMgr* pm = player->GetPhaseMgr(); pm && pm->HandlesCurrentZone())
+        {
+            pm->Recalculate();
+            player->GetSession()->SendSetPhaseShift(player->GetPhaseMask());
+            return;
+        }
+
         if (!newPhase)
             newPhase = PHASEMASK_NORMAL;
 

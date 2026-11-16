@@ -57,12 +57,22 @@ void PhaseMgr::Recalculate()
             break;
     }
 
-    uint32 const finalMask = phasemask ? phasemask : uint32(PHASEMASK_NORMAL);
+    // Custom: F-134, phase auras add to the zone's phases (Cataclysm's PhaseMgr merged both): the Wandering Isle's
+    // duel phase 102515 must not hide the zone's own phases, nor a recalculation drop the aura's
+    uint32 const finalMask = (phasemask ? phasemask : uint32(PHASEMASK_NORMAL)) | _player->GetPhaseByAuras();
     if (_player->GetPhaseMask() != finalMask)
         _player->SetPhaseMask(finalMask, true);
 
     if (terrainSwap != _terrainSwap)
         SendTerrainSwap(terrainSwap);
+}
+
+bool PhaseMgr::HandlesCurrentZone() const
+{
+    if (!_player || !sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE) || _player->IsGameMaster())
+        return false;
+    PhaseDefinitionStore const& store = sObjectMgr->GetPhaseDefinitionStore();
+    return store.find(_player->GetZoneId()) != store.end();
 }
 
 void PhaseMgr::SendTerrainSwap(uint32 swapMapId)

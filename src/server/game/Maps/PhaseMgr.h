@@ -80,6 +80,9 @@ public:
     // quest accept/complete/reward/abandon, login). Currently just recalculates.
     void NotifyConditionChanged() { Recalculate(); }
 
+    // Custom: F-134, whether the player's zone has phase_definitions (then phase auras go through Recalculate)
+    [[nodiscard]] bool HandlesCurrentZone() const;
+
 private:
     // WHE F-102: tell the client which map's tiles replace the base terrain (0 = none). Our client reads the
     // swap map and its base map after SMSG_SET_PHASE_SHIFT's phase; stock clients only read the phase.

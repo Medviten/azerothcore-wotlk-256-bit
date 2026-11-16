@@ -306,6 +306,7 @@ void WorldConfig::BuildConfigCache()
 
     SetConfigValue<bool>(CONFIG_GOBLIN_START_ZONE, "GoblinStartZone.Enable", false);
     SetConfigValue<bool>(CONFIG_GILNEAS_START_ZONE, "GilneasStartZone.Enable", false);
+    SetConfigValue<bool>(CONFIG_WANDERING_ISLE_START_ZONE, "WanderingIsleStartZone.Enable", false); // Custom: F-134
 
     SetConfigValue<uint32>(CONFIG_MAIL_DELIVERY_DELAY, "MailDeliveryDelay", HOUR);
     SetConfigValue<bool>(CONFIG_MAIL_PUSH_INBOX_ON_DELIVERY, "Mail.PushInboxOnDelivery", false);

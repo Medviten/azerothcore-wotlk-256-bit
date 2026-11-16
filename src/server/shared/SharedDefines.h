@@ -1255,7 +1255,9 @@ enum InvisibilityType
     INVISIBILITY_UNK10       = 10,
     INVISIBILITY_UNK11       = 11,
 
-    TOTAL_INVISIBILITY_TYPES = 12
+    // Custom: F-134, MoP's quest invisibility types go up to 30 (the Wandering Isle's phasing uses 5-30); the
+    // per-object arrays are 32-bit flag sets, so 32 is the limit
+    TOTAL_INVISIBILITY_TYPES = 32
 };
 
 enum ServerSideVisibilityType

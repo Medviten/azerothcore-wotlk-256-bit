@@ -1459,6 +1459,19 @@ GoblinStartZone.Enable = 0
 GilneasStartZone.Enable = 0
 
 #
+#    WanderingIsleStartZone.Enable
+#        Description: Core support for the Wandering Isle (Pandaren) start zone (WHE modpak F-134):
+#                     new Pandaren characters (except Death Knights) start on the Wandering Isle
+#                     (map 860) by Master Shang Xi, bound there, with "Much to Learn". The island's
+#                     phases are phase_definitions, so enabling it also enables everything
+#                     GoblinStartZone.Enable does and requires that table (from F-134, F-130 or
+#                     F-013). Needs F-134's server map files for map 860.
+#        Default:     0 - (Disabled, stock behaviour)
+#                     1 - (Enabled)
+
+WanderingIsleStartZone.Enable = 0
+
+#
 ###################################################################################################
 
 ###################################################################################################

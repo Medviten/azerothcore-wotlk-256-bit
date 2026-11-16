@@ -145,6 +145,7 @@ enum ServerConfigs
     CONFIG_OBJECT_QUEST_MARKERS,
     CONFIG_GOBLIN_START_ZONE, // F-013 Zeppelin goblin start zone core support
     CONFIG_GILNEAS_START_ZONE, // F-130 Gilneas (Worgen) start zone; turns CONFIG_GOBLIN_START_ZONE's support on too
+    CONFIG_WANDERING_ISLE_START_ZONE, // Custom: F-134 Wandering Isle (Pandaren) start; turns CONFIG_GOBLIN_START_ZONE's support on too
     CONFIG_STRICT_NAMES_RESERVED,
     CONFIG_STRICT_NAMES_PROFANITY,
     CONFIG_CHAT_FILTER_WHISPER,

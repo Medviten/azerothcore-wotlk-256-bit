@@ -199,6 +199,10 @@ void World::LoadConfigSettings(bool reload)
     if (getBoolConfig(CONFIG_GILNEAS_START_ZONE))
         setBoolConfig(CONFIG_GOBLIN_START_ZONE, true);
 
+    // Custom: F-134, the same for the Wandering Isle (its phases are phase_definitions)
+    if (getBoolConfig(CONFIG_WANDERING_ISLE_START_ZONE))
+        setBoolConfig(CONFIG_GOBLIN_START_ZONE, true);
+
     for (uint8 i = 0; i < MAX_MOVE_TYPE; ++i)
         playerBaseMoveSpeed[i] = baseMoveSpeed[i] * getRate(RATE_MOVESPEED_PLAYER);
 
