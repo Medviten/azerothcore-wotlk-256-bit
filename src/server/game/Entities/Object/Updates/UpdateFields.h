@@ -392,7 +392,9 @@ enum EUnitFields
     // Custom: quest log slots 25-254 (5 fields each, laid out like PLAYER_QUEST_LOG_1_1), appended so no stock field
     // moves. Private; the client takes them from the matching wowdecomp-256-bit build.
     PLAYER_QUEST_LOG_EXT_1_1                  = UNIT_END + 0x049A, // Size: 1150, Type: INT, Flags: PRIVATE
-    PLAYER_END                                = UNIT_END + 0x0918, // Custom: was UNIT_END + 0x049A
+    PLAYER_QUEST_LOG_SIZE                     = UNIT_END + 0x0918, // Size: 1, Type: INT, Flags: PRIVATE (Custom: Quests.LogSize, for the client's GetQuestLogCapacity())
+    PLAYER_FIELD_EXT_PADDING                  = UNIT_END + 0x0919, // Size: 1, Type: INT, Flags: PRIVATE (Custom: always 0, keeps the client's player data a multiple of 8 bytes)
+    PLAYER_END                                = UNIT_END + 0x091A, // Custom: was UNIT_END + 0x049A
 };
 
 enum EGameObjectFields

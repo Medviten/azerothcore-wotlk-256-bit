@@ -58,6 +58,9 @@ void Player::Update(uint32 p_time)
 
     sScriptMgr->OnPlayerBeforeUpdate(this, p_time);
 
+    // Custom: tell the client the quest log size (only sent when it changes, e.g. after .reload config)
+    SetUInt32Value(PLAYER_QUEST_LOG_SIZE, GetQuestLogSize());
+
     // undelivered mail
     if (m_nextMailDelivereTime && m_nextMailDelivereTime <= GameTime::GetGameTime().count())
     {
