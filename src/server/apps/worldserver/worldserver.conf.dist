@@ -3031,6 +3031,17 @@ Quests.IgnoreAutoAccept = 0
 Quests.IgnoreAutoComplete = 0
 
 #
+#    Quests.LogSize
+#        Description: Number of quests a character can have in the quest log. Above 25 needs a client
+#                     that shows the extra slots (wowdecomp-256-bit, or the client patch in WHE's F-135).
+#                     Characters already holding more quests keep them, but can't take new ones until
+#                     they are below the limit.
+#        Range:       25-255
+#        Default:     25 - (Stock size)
+
+Quests.LogSize = 25
+
+#
 #    Rate.RewardQuestMoney
 #        Description: Allows to tweak the amount of money rewarded by quests (does not affect RewardBonusMoney).
 #        Default:     1

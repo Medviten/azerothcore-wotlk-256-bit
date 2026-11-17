@@ -1487,7 +1487,18 @@ uint32 UnitUpdateFieldFlags[PLAYER_END] =
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_GLYPHS_1+5
     UF_FLAG_PRIVATE,                                        // PLAYER_GLYPHS_ENABLED
     UF_FLAG_PRIVATE,                                        // PLAYER_PET_SPELL_POWER
+    // PLAYER_QUEST_LOG_EXT_1_1 .. PLAYER_END: filled in below
 };
+
+// Custom: the extended quest log fields are all private
+static struct QuestLogExtFieldFlags
+{
+    QuestLogExtFieldFlags()
+    {
+        for (uint32 i = PLAYER_QUEST_LOG_EXT_1_1; i < PLAYER_END; ++i)
+            UnitUpdateFieldFlags[i] = UF_FLAG_PRIVATE;
+    }
+} s_questLogExtFieldFlags;
 
 uint32 GameObjectUpdateFieldFlags[GAMEOBJECT_END] =
 {

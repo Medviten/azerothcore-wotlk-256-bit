@@ -31,7 +31,10 @@ class Player;
 
 class ObjectMgr;
 
-#define MAX_QUEST_LOG_SIZE 25
+// Custom: 255 quest log slots (stock 25). Slots 0-24 use PLAYER_QUEST_LOG_1_1..25_5, slots 25-254 the
+// PLAYER_QUEST_LOG_EXT fields after them; needs the matching wowdecomp-256-bit client.
+#define MAX_QUEST_LOG_SIZE 255
+#define MAX_QUEST_LOG_SIZE_STOCK 25
 
 #define QUEST_OBJECTIVES_COUNT 4
 #define QUEST_ITEM_OBJECTIVES_COUNT 6

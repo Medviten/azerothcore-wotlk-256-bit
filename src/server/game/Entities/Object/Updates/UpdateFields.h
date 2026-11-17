@@ -389,7 +389,10 @@ enum EUnitFields
     PLAYER_FIELD_GLYPHS_1                     = UNIT_END + 0x0492, // Size: 6, Type: INT, Flags: PRIVATE
     PLAYER_GLYPHS_ENABLED                     = UNIT_END + 0x0498, // Size: 1, Type: INT, Flags: PRIVATE
     PLAYER_PET_SPELL_POWER                    = UNIT_END + 0x0499, // Size: 1, Type: INT, Flags: PRIVATE
-    PLAYER_END                                = UNIT_END + 0x049A,
+    // Custom: quest log slots 25-254 (5 fields each, laid out like PLAYER_QUEST_LOG_1_1), appended so no stock field
+    // moves. Private; the client takes them from the matching wowdecomp-256-bit build.
+    PLAYER_QUEST_LOG_EXT_1_1                  = UNIT_END + 0x049A, // Size: 1150, Type: INT, Flags: PRIVATE
+    PLAYER_END                                = UNIT_END + 0x0918, // Custom: was UNIT_END + 0x049A
 };
 
 enum EGameObjectFields

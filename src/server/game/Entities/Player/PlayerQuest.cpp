@@ -523,7 +523,7 @@ bool Player::CanRewardQuest(Quest const* quest, uint32 reward, bool msg)
 
 void Player::AddQuest(Quest const* quest, Object* questGiver)
 {
-    uint16 log_slot = FindQuestSlot(0);
+    uint16 log_slot = FindFreeQuestSlot(); // Custom: was FindQuestSlot(0), which ignores Quests.LogSize
 
     if (log_slot >= MAX_QUEST_LOG_SIZE) // Player does not have any free slot in the quest log
         return;
@@ -1047,7 +1047,7 @@ bool Player::SatisfyQuestLevel(Quest const* qInfo, bool msg) const
 bool Player::SatisfyQuestLog(bool msg)
 {
     // exist free slot
-    if (FindQuestSlot(0) < MAX_QUEST_LOG_SIZE)
+    if (FindFreeQuestSlot() < MAX_QUEST_LOG_SIZE) // Custom: was FindQuestSlot(0), which ignores Quests.LogSize
         return true;
 
     if (msg)
@@ -1886,6 +1886,23 @@ uint16 Player::FindQuestSlot(uint32 quest_id) const
 {
     for (uint16 i = 0; i < MAX_QUEST_LOG_SIZE; ++i)
         if (GetQuestSlotQuestId(i) == quest_id)
+            return i;
+
+    return MAX_QUEST_LOG_SIZE;
+}
+
+// Custom: Quests.LogSize
+uint16 Player::GetQuestLogSize()
+{
+    return uint16(sWorld->getIntConfig(CONFIG_QUEST_LOG_SIZE));
+}
+
+// Custom: only slots below Quests.LogSize are handed out; quests already in higher slots stay where they are
+uint16 Player::FindFreeQuestSlot() const
+{
+    uint16 size = GetQuestLogSize();
+    for (uint16 i = 0; i < size; ++i)
+        if (!GetQuestSlotQuestId(i))
             return i;
 
     return MAX_QUEST_LOG_SIZE;

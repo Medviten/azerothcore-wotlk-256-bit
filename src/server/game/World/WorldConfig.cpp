@@ -391,6 +391,8 @@ void WorldConfig::BuildConfigCache()
     SetConfigValue<uint32>(CONFIG_QUEST_LOW_LEVEL_HIDE_DIFF, "Quests.LowLevelHideDiff", 4, ConfigValueCache::Reloadable::Yes, [](uint32 const& value) { return value <= MAX_LEVEL; }, "<= MAX_LEVEL");
     SetConfigValue<uint32>(CONFIG_QUEST_HIGH_LEVEL_HIDE_DIFF, "Quests.HighLevelHideDiff", 7, ConfigValueCache::Reloadable::Yes, [](uint32 const& value) { return value <= MAX_LEVEL; }, "<= MAX_LEVEL");
     SetConfigValue<bool>(CONFIG_QUEST_IGNORE_RAID, "Quests.IgnoreRaid", false);
+    // Custom: quest log size, 25 (stock) to MAX_QUEST_LOG_SIZE
+    SetConfigValue<uint32>(CONFIG_QUEST_LOG_SIZE, "Quests.LogSize", 25, ConfigValueCache::Reloadable::Yes, [](uint32 const& value) { return value >= MAX_QUEST_LOG_SIZE_STOCK && value <= MAX_QUEST_LOG_SIZE; }, ">= MAX_QUEST_LOG_SIZE_STOCK && <= MAX_QUEST_LOG_SIZE");
     SetConfigValue<bool>(CONFIG_QUEST_IGNORE_AUTO_ACCEPT, "Quests.IgnoreAutoAccept", false);
     SetConfigValue<bool>(CONFIG_QUEST_IGNORE_AUTO_COMPLETE, "Quests.IgnoreAutoComplete", false);
 
