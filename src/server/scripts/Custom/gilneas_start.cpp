@@ -26,6 +26,7 @@
 #include "ScriptedCreature.h"
 #include "SpellAuraEffects.h"
 #include "SpellInfo.h"
+#include "SpellMgr.h"
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
 #include "TemporarySummon.h"
@@ -465,8 +466,8 @@ public:
  * so no race id is needed. */
 enum WorgenCurse
 {
-    SPELL_HUMAN_FORM_MALE           = 68994,  // @SpellHumanFormMale
-    SPELL_HUMAN_FORM_FEMALE         = 110020, // @SpellHumanFormFemale
+    SPELL_HUMAN_FORM_MALE           = 68995,  // @SpellHumanFormMale: with F-063 the one Human Form, for both genders
+    SPELL_HUMAN_FORM_FEMALE         = 110020, // @SpellHumanFormFemale: the female transform without F-063 (which deletes it)
     SPELL_TWO_FORMS                 = 68996,  // @SpellTwoFormsMale
     ZONE_GILNEAS                    = 4714,
     ZONE_GILNEAS_CITY               = 4755,
@@ -517,7 +518,8 @@ private:
                 player->learnSpell(SPELL_TWO_FORMS);
             return;
         }
-        uint32 humanForm = player->getGender() == GENDER_FEMALE ? SPELL_HUMAN_FORM_FEMALE : SPELL_HUMAN_FORM_MALE;
+        uint32 humanForm = player->getGender() == GENDER_FEMALE && sSpellMgr->GetSpellInfo(SPELL_HUMAN_FORM_FEMALE)
+            ? SPELL_HUMAN_FORM_FEMALE : SPELL_HUMAN_FORM_MALE;
         if (!player->HasAura(humanForm))
             player->CastSpell(player, humanForm, true);
     }
