@@ -5358,8 +5358,9 @@ void AuraEffect::HandleAuraDummy(AuraApplication const* aurApp, uint8 mode, bool
                 }
 
                 // Zeppelin I-376: custom taming rods name their final tame spell in the rod's own
-                // effect 2 TriggerSpell (unused by the dummy aura), so new rods need no entry above.
-                if (!finalSpelId && sWorld->getBoolConfig(CONFIG_GOBLIN_START_ZONE))
+                // effect 2 TriggerSpell (unused by the dummy aura), so new rods need no entry above. Not gated by
+                // GoblinStartZone: stock rods leave that trigger 0, and F-029's rods need it without Kezan.
+                if (!finalSpelId)
                     finalSpelId = GetSpellInfo()->Effects[EFFECT_1].TriggerSpell;
 
                 if (finalSpelId)
