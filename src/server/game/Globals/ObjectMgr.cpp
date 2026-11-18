@@ -1740,6 +1740,14 @@ void ObjectMgr::LoadCreatureModelInfo()
         CreatureDisplayInfoEntry const* creatureDisplay = sCreatureDisplayInfoStore.LookupEntry(displayId);
         uint32 modelId = fields[0].Get<uint32>();
 
+        // Custom: skip the row instead of dereferencing the null display below (crashed the loader on modpak rows
+        // whose CreatureDisplayInfo rows are missing from the server's DBCs).
+        if (!creatureDisplay)
+        {
+            LOG_ERROR("sql.sql", "Table `creature_model_info` has model for not existed display id ({}).", modelId);
+            continue;
+        }
+
         CreatureModelInfo& modelInfo = _creatureModelStore[modelId];
 
         modelInfo.bounding_radius      = fields[1].Get<float>();
@@ -1749,9 +1757,6 @@ void ObjectMgr::LoadCreatureModelInfo()
         modelInfo.is_trigger           = false;
 
         // Checks
-
-        if (!sCreatureDisplayInfoStore.LookupEntry(modelId))
-            LOG_ERROR("sql.sql", "Table `creature_model_info` has model for not existed display id ({}).", modelId);
 
         if (modelInfo.gender > GENDER_NONE)
         {
