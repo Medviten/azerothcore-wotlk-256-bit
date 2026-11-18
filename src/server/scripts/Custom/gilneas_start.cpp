@@ -16,6 +16,7 @@
  */
 
 #include "CreatureScript.h"
+#include "DatabaseEnv.h"
 #include "GameObject.h"
 #include "MotionMaster.h"
 #include "MoveSpline.h"
@@ -480,7 +481,31 @@ class WorgenCursePlayerScript : public PlayerScript
 {
 public:
     WorgenCursePlayerScript() : PlayerScript("WorgenCursePlayerScript",
-        { PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_UPDATE_ZONE, PLAYERHOOK_ON_PLAYER_COMPLETE_QUEST }) { }
+        { PLAYERHOOK_ON_CREATE, PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_UPDATE_ZONE, PLAYERHOOK_ON_PLAYER_COMPLETE_QUEST }) { }
+
+    // A new Worgen has Human Form saved with the character, so the first login loads it with the other auras and the
+    // client draws the human from the start; cast at login, it would show the swap from the native form. The hook
+    // runs after the character is saved, hence the row written directly (as Player::_SaveAuras writes it)
+    void OnPlayerCreate(Player* player) override
+    {
+        if (!IsUnturnedWorgenClass(player))
+            return;
+        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_INS_AURA);
+        uint8 index = 0;
+        stmt->SetData(index++, player->GetGUID().GetCounter());
+        stmt->SetData(index++, player->GetGUID().GetRawValue());
+        stmt->SetData(index++, uint64(0));
+        stmt->SetData(index++, HumanFormFor(player));
+        stmt->SetData(index++, uint8(1));
+        stmt->SetData(index++, uint8(0));
+        stmt->SetData(index++, uint8(1));
+        for (uint8 i = 0; i < 6; ++i)
+            stmt->SetData(index++, int32(0));
+        stmt->SetData(index++, int32(-1));
+        stmt->SetData(index++, int32(-1));
+        stmt->SetData(index++, uint8(0));
+        CharacterDatabase.Execute(stmt);
+    }
 
     void OnPlayerLogin(Player* player) override { Update(player, player->GetZoneId()); }
 
@@ -518,10 +543,15 @@ private:
                 player->learnSpell(SPELL_TWO_FORMS);
             return;
         }
-        uint32 humanForm = player->getGender() == GENDER_FEMALE && sSpellMgr->GetSpellInfo(SPELL_HUMAN_FORM_FEMALE)
-            ? SPELL_HUMAN_FORM_FEMALE : SPELL_HUMAN_FORM_MALE;
+        uint32 humanForm = HumanFormFor(player);
         if (!player->HasAura(humanForm))
             player->CastSpell(player, humanForm, true);
+    }
+
+    static uint32 HumanFormFor(Player* player)
+    {
+        return player->getGender() == GENDER_FEMALE && sSpellMgr->GetSpellInfo(SPELL_HUMAN_FORM_FEMALE)
+            ? SPELL_HUMAN_FORM_FEMALE : SPELL_HUMAN_FORM_MALE;
     }
 
     static void Turn(Player* player)
