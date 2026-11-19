@@ -1693,6 +1693,10 @@ void Player::SendQuestUpdate(uint32 questId)
     }
 
     UpdateForQuestWorldObjects();
+
+    // Custom: F-137 (Exile's Reach) shows its quest-stage NPCs through object visibility conditions on quest
+    // states; those are only rechecked when the player moves, so queue a visibility update for the new state.
+    UpdateObjectVisibility(false);
 }
 
 QuestGiverStatus Player::GetQuestDialogStatus(Object* questgiver)
