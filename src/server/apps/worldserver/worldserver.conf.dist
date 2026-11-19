@@ -1687,6 +1687,17 @@ DisableWaterBreath = 4
 DisableFatigue = 0
 
 #
+#    PetAutocastNewSpells
+#        Description: Pet spells that need a target (Firebolt, Bite, Claw, ...) start with autocast on
+#                     when the pet learns them, as on retail. An imp only attacks by autocasting Firebolt,
+#                     so with this off a new imp ignores the Attack command until Firebolt is set to
+#                     autocast. Spells pets already know keep their saved setting.
+#        Default:     0 - (Disabled, stock behaviour: new pet spells start with autocast off)
+#                     1 - (Enabled)
+
+PetAutocastNewSpells = 0
+
+#
 #    AllFlightPaths
 #        Description: Character knows all flight paths (of both factions) after creation.
 #        Default:     0 - (Disabled)

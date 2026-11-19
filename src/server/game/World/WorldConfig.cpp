@@ -349,6 +349,8 @@ void WorldConfig::BuildConfigCache()
 
     SetConfigValue<bool>(CONFIG_DISABLE_FATIGUE, "DisableFatigue", false);
 
+    SetConfigValue<bool>(CONFIG_PET_AUTOCAST_NEW_SPELLS, "PetAutocastNewSpells", false); // Custom: F-089
+
     SetConfigValue<bool>(CONFIG_ALWAYS_MAX_SKILL_FOR_LEVEL, "AlwaysMaxSkillForLevel", false);
 
     SetConfigValue<uint32>(CONFIG_EXPANSION, "Expansion", 2, ConfigValueCache::Reloadable::No);

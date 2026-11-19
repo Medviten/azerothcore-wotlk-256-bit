@@ -1813,8 +1813,11 @@ bool Pet::addSpell(uint32 spellId, ActiveStates active /*= ACT_DECIDE*/, PetSpel
 
     if (active == ACT_DECIDE)                               // active was not used before, so we save it's autocast/passive state here
     {
+        // Custom: F-089 PetAutocastNewSpells, targeted spells start on autocast as on retail (an imp attacks only by
+        // autocasting Firebolt)
         if (spellInfo->IsAutocastable())
-            newspell.active = ACT_DISABLED;
+            newspell.active = sWorld->getBoolConfig(CONFIG_PET_AUTOCAST_NEW_SPELLS) && spellInfo->NeedsExplicitUnitTarget()
+                ? ACT_ENABLED : ACT_DISABLED;
         else
             newspell.active = ACT_PASSIVE;
     }
@@ -1875,8 +1878,8 @@ bool Pet::addSpell(uint32 spellId, ActiveStates active /*= ACT_DECIDE*/, PetSpel
 
     if (spellInfo->IsPassive())
         CastSpell(this, spellId, true);
-    else
-        m_charmInfo->AddSpellToActionBar(spellInfo);
+    else // Custom: F-089, the bar shows a spell PetAutocastNewSpells turned on as autocast
+        m_charmInfo->AddSpellToActionBar(spellInfo, newspell.active == ACT_ENABLED ? ACT_ENABLED : ACT_DECIDE);
 
     // unapply aura stats if dont meet requirements
     if (Aura* aura = GetAura(spellId))
