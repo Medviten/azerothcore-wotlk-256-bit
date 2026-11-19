@@ -1472,6 +1472,20 @@ GilneasStartZone.Enable = 0
 WanderingIsleStartZone.Enable = 0
 
 #
+#    ExilesReachStartZone.Enable
+#        Description: Exile's Reach ship start (WHE modpak F-137). F-137 itself moves the start of the
+#                     races it takes (player_race_template.exiles_reach, most custom races) to the
+#                     island's beach; with this on, those new characters (except Death Knights and
+#                     those the Wandering Isle start takes) start aboard their faction's ship sailing
+#                     to the island instead, as retail's new player experience. Needs F-137 (the
+#                     ships are its continent transports 13701 and 13702) and
+#                     EnableContinentTransport; without the ship a character starts on the beach.
+#        Default:     0 - (Disabled, the beach)
+#                     1 - (Enabled, the ship)
+
+ExilesReachStartZone.Enable = 0
+
+#
 ###################################################################################################
 
 ###################################################################################################
