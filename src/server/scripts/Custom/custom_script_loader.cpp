@@ -23,6 +23,7 @@ void AddSC_gilneas_start(); // Custom: F-130 Gilneas start zone
 void AddSC_wandering_isle_start(); // Custom: F-134 Wandering Isle start
 void AddSC_wandering_isle(); // Custom: F-134 Wandering Isle scripts
 void AddSC_exiles_reach_start(); // Custom: F-137 Exile's Reach start
+void AddSC_exiles_reach(); // Custom: F-137 Exile's Reach scripts
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -35,4 +36,5 @@ void AddCustomScripts()
     AddSC_wandering_isle_start();
     AddSC_wandering_isle();
     AddSC_exiles_reach_start();
+    AddSC_exiles_reach();
 }
