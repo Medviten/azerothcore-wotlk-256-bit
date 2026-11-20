@@ -1236,7 +1236,8 @@ enum BoarData
 
     // F-137's CUSTOM_SPELLS
     SPELL_RIDE_BOAR         = 13700002, // mounted on the Giant Boar, trampling around
-    SPELL_RIDE_COPTER       = 13700003, // mounted on the Choppy Booster, bombing around
+    SPELL_RIDE_COPTER       = 13700003, // flying on the Choppy Booster, bombing around
+    SPELL_SLOW_FALL         = 130,
 
     LINE_BOAR_HANG_ON_A     = 178754,   // "Something's happening to the boar! Hang on, $n!"
     LINE_BOAR_DONE_A        = 187052,   // "We've dealt with the undead. Now let's finish off that necromancer..."
@@ -1286,8 +1287,8 @@ class spell_er_re_sizer : public SpellScript
 
 // 156595 - Giant Boar (Ride of the Scientifically Enhanced Boar), 167142 - Choppy Booster Mk. 5 (The Re-Deather):
 // retail's vehicles. Talking to one credits the ride and mounts the player on it for two minutes (F-137's custom
-// aura), trampling (the boar) or bombing (the copter) everything around them every 1.5 seconds: the skeleton army
-// falls as they ride through it
+// aura: the copter flies), trampling (the boar) or bombing (the copter) everything around them every 1.5 seconds:
+// the skeleton army falls as they ride through it
 struct npc_er_ride : public ScriptedAI
 {
     npc_er_ride(Creature* creature) : ScriptedAI(creature) { }
@@ -1312,6 +1313,25 @@ struct npc_er_ride : public ScriptedAI
     }
 };
 
+// 13700003 - Choppy Booster Mk. 5 (F-137's custom aura: The Re-Deather's flying ride): it ends wherever the rider is,
+// so they float down instead of falling (Slow Fall)
+class spell_er_ride_copter : public AuraScript
+{
+    PrepareAuraScript(spell_er_ride_copter);
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* target = GetTarget())
+            target->CastSpell(target, SPELL_SLOW_FALL, true);
+    }
+
+    void Register() override
+    {
+        AfterEffectRemove += AuraEffectRemoveFn(spell_er_ride_copter::HandleRemove, EFFECT_1,
+            SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
 void AddSC_exiles_reach()
 {
     new ExilesReachQuestScript();
@@ -1328,4 +1348,5 @@ void AddSC_exiles_reach()
     RegisterCreatureAI(npc_er_boss);
     RegisterCreatureAI(npc_er_ride);
     RegisterSpellScript(spell_er_re_sizer);
+    RegisterSpellScript(spell_er_ride_copter);
 }
