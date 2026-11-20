@@ -58,6 +58,8 @@ enum ExilesReachData
     QUEST_RESIZING_H                    = 59941,
     QUEST_BOAR_RIDE_A                   = 55879,
     QUEST_RE_DEATHER_H                  = 59942,
+    QUEST_WESTWARD_BOUND_A              = 55965,
+    QUEST_WESTWARD_BOUND_H              = 59948,
 
     // the ships
     NPC_GARRICK_SHIP                    = 156280,
@@ -97,6 +99,10 @@ enum ExilesReachData
     NPC_CHOPPY_BOOSTER                  = 167027,
     NPC_HENRY_PRISONER                  = 156799,
     NPC_SHUJA_PRISONER                  = 167126,
+    NPC_BJORN_WESTWARD                  = 156891,   // Westward Bound's enders, at Hrun's pit
+    NPC_ALARIA_WESTWARD                 = 156803,
+    NPC_LANA_WESTWARD                   = 167225,
+    NPC_WONSA_WESTWARD                  = 167226,
 
     // conversation lines and texts (broadcast text ids)
     LINE_WARMING_UP_ACCEPT_A            = 291036,
@@ -254,6 +260,11 @@ public:
             case QUEST_TAMING_THE_WILDS_A:
             case QUEST_TAMING_THE_WILDS_H:
                 TeachTaming(player);
+                break;
+            case QUEST_WESTWARD_BOUND_A:
+            case QUEST_WESTWARD_BOUND_H:
+                SummonFollower(player, IsAlliance(player) ? NPC_BJORN_WESTWARD : NPC_LANA_WESTWARD);
+                SummonFollower(player, IsAlliance(player) ? NPC_ALARIA_WESTWARD : NPC_WONSA_WESTWARD);
                 break;
             case QUEST_DOWN_WITH_THE_QUILBOAR_A:
             case QUEST_QUILBOAR_NECROMANCY_A:
@@ -535,7 +546,7 @@ enum FollowerData
     POINT_FOLLOWER_GOAL     = 1,
 };
 
-struct FollowerInfo
+struct ErFollowerInfo
 {
     uint32 Entry;
     uint32 Quest;
@@ -546,13 +557,18 @@ struct FollowerInfo
     uint32 OtherLine;
 };
 
-static FollowerInfo const Followers[] =
+static ErFollowerInfo const Followers[] =
 {
     // Finding the Lost Expedition: the leader sends the survivors off and finds the expedition's last survivor
     { NPC_GARRICK_FOLLOWER, QUEST_FINDING_THE_LOST_EXPEDITION_A, LINE_EXPEDITION_A, AbandonedCamp, LINE_CAMP_LEADER_A,
       NPC_ALARIA_CAMP, LINE_CAMP_HUNGRY_A },
     { NPC_GRIMAXE_FOLLOWER, QUEST_FINDING_THE_LOST_EXPEDITION_H, LINE_EXPEDITION_H, AbandonedCamp, LINE_CAMP_LEADER_H,
       NPC_WONSA_CAMP, LINE_CAMP_HUNGRY_H },
+    // Westward Bound: the scouts come along to Hrun's pit (the enders standing there)
+    { NPC_BJORN_WESTWARD, QUEST_WESTWARD_BOUND_A, 178906, { 89.684f, -2249.26f, 94.7782f, 0.0f }, 178907, 0, 0 },
+    { NPC_ALARIA_WESTWARD, QUEST_WESTWARD_BOUND_A, 0, { 91.9826f, -2246.83f, 94.4823f, 0.0f }, 0, 0, 0 },
+    { NPC_LANA_WESTWARD, QUEST_WESTWARD_BOUND_H, 196409, { 92.0156f, -2246.91f, 94.4974f, 0.0f }, 196410, 0, 0 },
+    { NPC_WONSA_WESTWARD, QUEST_WESTWARD_BOUND_H, 0, { 89.2656f, -2248.96f, 94.7457f, 0.0f }, 0, 0, 0 },
     // Northbound: the leader leaves Alaria / Won'sa to rest and comes along to the Quilboar Briarpatch
     { NPC_GARRICK_NORTHBOUND, QUEST_NORTHBOUND_A, LINE_NORTHBOUND_A, { -142.62154f, -2641.0364f, 48.775497f, 6.07f }, 0,
       0, 0 },
@@ -561,15 +577,16 @@ static FollowerInfo const Followers[] =
 };
 
 // 165359 / 166805 (Finding the Lost Expedition), 165360 / 175034 (Northbound) - Captain Garrick, Warlord Breka
-// Grimaxe: summoned on the quest's accept (visible to the player only), they follow the player to the quest's goal and
-// walk there once the player arrives (FollowerInfo)
+// Grimaxe; 156891 / 156803, 167225 / 167226 (Westward Bound) - the scouts: summoned on the quest's accept (visible to
+// the player only), they follow the player to the quest's goal and walk there once the player arrives (ErFollowerInfo).
+// The spawned ones with these entries (Westward Bound's enders at the pit) have nothing to do
 struct npc_er_follower : public ScriptedAI
 {
     npc_er_follower(Creature* creature) : ScriptedAI(creature) { }
 
-    FollowerInfo const* Info() const
+    ErFollowerInfo const* Info() const
     {
-        for (FollowerInfo const& info : Followers)
+        for (ErFollowerInfo const& info : Followers)
             if (info.Entry == me->GetEntry())
                 return &info;
         return nullptr;
@@ -592,7 +609,7 @@ struct npc_er_follower : public ScriptedAI
     {
         if (type == POINT_MOTION_TYPE && id == POINT_FOLLOWER_GOAL)
         {
-            if (FollowerInfo const* info = Info())
+            if (ErFollowerInfo const* info = Info())
                 me->SetFacingTo(info->Goal.GetOrientation());
             me->DespawnOrUnsummon(10s);
         }
@@ -601,7 +618,7 @@ struct npc_er_follower : public ScriptedAI
     void UpdateAI(uint32 diff) override
     {
         events.Update(diff);
-        FollowerInfo const* info = Info();
+        ErFollowerInfo const* info = Info();
         if (!info)
             return;
         switch (events.ExecuteEvent())
@@ -609,7 +626,8 @@ struct npc_er_follower : public ScriptedAI
             case EVENT_FOLLOWER_START:
                 if (Player* owner = Owner())
                 {
-                    me->Say(info->StartLine, owner);
+                    if (info->StartLine)
+                        me->Say(info->StartLine, owner);
                     me->GetMotionMaster()->MoveFollow(owner, 2.0f, static_cast<float>(M_PI) / 4);
                 }
                 events.ScheduleEvent(EVENT_FOLLOWER_CHECK, 2s);
@@ -1148,7 +1166,7 @@ struct npc_er_torgok : public ScriptedAI
 
 // ---- the bosses TrinityCore scripts little or not at all ----------------------------------------------------------
 
-struct BossAbility
+struct ErBossAbility
 {
     uint32 Spell;
     Milliseconds First;
@@ -1158,14 +1176,14 @@ struct BossAbility
     int8 TextGroup;         // creature_text group said as it casts (-1: none)
 };
 
-struct BossInfo
+struct ErBossInfo
 {
     uint32 Entry;
-    BossAbility Abilities[2];
+    ErBossAbility Abilities[2];
 };
 
 // stock NPC spells for retail's
-static BossInfo const Bosses[] =
+static ErBossInfo const Bosses[] =
 {
     // Tunk (Darkmaul Citadel; TrinityCore's boss_tunk): Interrupting Shout -> Shield Bash, Seismic Slam -> Thunderclap,
     // with his warnings (raid boss whispers)
@@ -1183,9 +1201,9 @@ struct npc_er_boss : public ScriptedAI
 {
     npc_er_boss(Creature* creature) : ScriptedAI(creature) { }
 
-    BossInfo const* Info() const
+    ErBossInfo const* Info() const
     {
-        for (BossInfo const& info : Bosses)
+        for (ErBossInfo const& info : Bosses)
             if (info.Entry == me->GetEntry())
                 return &info;
         return nullptr;
@@ -1195,7 +1213,7 @@ struct npc_er_boss : public ScriptedAI
 
     void JustEngagedWith(Unit* /*who*/) override
     {
-        if (BossInfo const* info = Info())
+        if (ErBossInfo const* info = Info())
             for (uint32 i = 0; i < 2; ++i)
                 if (info->Abilities[i].Spell)
                     events.ScheduleEvent(i + 1, info->Abilities[i].First);
@@ -1208,10 +1226,10 @@ struct npc_er_boss : public ScriptedAI
         events.Update(diff);
         if (me->HasUnitState(UNIT_STATE_CASTING))
             return;
-        BossInfo const* info = Info();
+        ErBossInfo const* info = Info();
         if (uint32 eventId = events.ExecuteEvent(); info && eventId >= 1 && eventId <= 2)
         {
-            BossAbility const& ability = info->Abilities[eventId - 1];
+            ErBossAbility const& ability = info->Abilities[eventId - 1];
             if (ability.TextGroup >= 0)
                 Talk(ability.TextGroup, me->GetVictim());
             if (ability.OnSelf)
