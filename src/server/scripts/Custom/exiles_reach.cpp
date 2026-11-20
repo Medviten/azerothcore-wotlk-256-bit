@@ -358,7 +358,8 @@ private:
             Player* p = ObjectAccessor::FindPlayer(guid);
             if (!p || p->getClass() != CLASS_HUNTER)
                 return;
-            for (uint32 spell : { 1515u, 883u, 2641u, 982u, 6991u })    // Tame Beast, Call / Dismiss / Revive / Feed Pet
+            // Tame Beast, Call / Dismiss / Revive / Feed Pet
+            for (uint32 spell : { 1515u, 883u, 2641u, 982u, 6991u })
                 if (!p->HasSpell(spell))
                     p->learnSpell(spell);
         }, 6s);
@@ -636,7 +637,8 @@ struct npc_er_follower : public ScriptedAI
             {
                 Player* owner = Owner();
                 // the player left, dropped the quest or went elsewhere: no follower
-                if (!owner || owner->GetQuestStatus(info->Quest) == QUEST_STATUS_NONE || !me->IsWithinDist(owner, 80.0f))
+                if (!owner || owner->GetQuestStatus(info->Quest) == QUEST_STATUS_NONE ||
+                    !me->IsWithinDist(owner, 80.0f))
                 {
                     me->DespawnOrUnsummon();
                     break;
@@ -1084,7 +1086,8 @@ struct npc_er_scout_copter : public ScriptedAI
         uint32 credit = me->GetEntry();
         if (!player->ActivateTaxiPathTo(nodes))
         {
-            player->KilledMonsterCredit(credit);    // no flight (busy, or the DBC rows missing): the quest still goes on
+            // no flight (busy, or the DBC rows missing): the quest still goes on
+            player->KilledMonsterCredit(credit);
             return;
         }
         Milliseconds delay = 3s;
