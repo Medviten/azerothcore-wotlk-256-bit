@@ -1144,6 +1144,84 @@ struct npc_er_torgok : public ScriptedAI
     }
 };
 
+// ---- the bosses TrinityCore scripts little or not at all ----------------------------------------------------------
+
+struct BossAbility
+{
+    uint32 Spell;
+    Milliseconds First;
+    Milliseconds RepeatMin;
+    Milliseconds RepeatMax;
+    bool OnSelf;            // an area spell around the boss, not on its victim
+    int8 TextGroup;         // creature_text group said as it casts (-1: none)
+};
+
+struct BossInfo
+{
+    uint32 Entry;
+    BossAbility Abilities[2];
+};
+
+// stock NPC spells for retail's
+static BossInfo const Bosses[] =
+{
+    // Tunk (Darkmaul Citadel; TrinityCore's boss_tunk): Interrupting Shout -> Shield Bash, Seismic Slam -> Thunderclap,
+    // with his warnings (raid boss whispers)
+    { 157300, { { 72, 7s, 20s, 20s, false, 1 }, { 8078, 14s, 30s, 30s, true, 0 } } },
+    // Gor'groth (Darkmaul Citadel's end): the ritual's necromancer
+    { 156814, { { 695, 3s, 6s, 9s, false, -1 }, { 8078, 12s, 15s, 20s, true, -1 } } },
+    // Hrun the Exiled (Hrun's pit)
+    { 156900, { { 11976, 4s, 8s, 12s, false, -1 }, { 8078, 10s, 15s, 20s, true, -1 } } },
+    // Bloodbeak (the harpies' ritual)
+    { 153964, { { 695, 3s, 7s, 10s, false, -1 }, { 6253, 9s, 15s, 20s, false, -1 } } },
+};
+
+// Tunk, Gor'groth, Hrun the Exiled, Bloodbeak: a boss's two abilities on a timer (Bosses)
+struct npc_er_boss : public ScriptedAI
+{
+    npc_er_boss(Creature* creature) : ScriptedAI(creature) { }
+
+    BossInfo const* Info() const
+    {
+        for (BossInfo const& info : Bosses)
+            if (info.Entry == me->GetEntry())
+                return &info;
+        return nullptr;
+    }
+
+    void Reset() override { events.Reset(); }
+
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        if (BossInfo const* info = Info())
+            for (uint32 i = 0; i < 2; ++i)
+                if (info->Abilities[i].Spell)
+                    events.ScheduleEvent(i + 1, info->Abilities[i].First);
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (!UpdateVictim())
+            return;
+        events.Update(diff);
+        if (me->HasUnitState(UNIT_STATE_CASTING))
+            return;
+        BossInfo const* info = Info();
+        if (uint32 eventId = events.ExecuteEvent(); info && eventId >= 1 && eventId <= 2)
+        {
+            BossAbility const& ability = info->Abilities[eventId - 1];
+            if (ability.TextGroup >= 0)
+                Talk(ability.TextGroup, me->GetVictim());
+            if (ability.OnSelf)
+                DoCastAOE(ability.Spell);
+            else
+                DoCastVictim(ability.Spell);
+            events.ScheduleEvent(eventId, ability.RepeatMin, ability.RepeatMax);
+        }
+        DoMeleeAttackIfReady();
+    }
+};
+
 void AddSC_exiles_reach()
 {
     new ExilesReachQuestScript();
@@ -1157,4 +1235,5 @@ void AddSC_exiles_reach()
     RegisterCreatureAI(npc_er_briarpatch_prisoner);
     RegisterCreatureAI(npc_er_scout_copter);
     RegisterCreatureAI(npc_er_torgok);
+    RegisterCreatureAI(npc_er_boss);
 }
