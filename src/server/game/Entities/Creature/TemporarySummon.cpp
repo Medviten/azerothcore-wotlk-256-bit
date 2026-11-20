@@ -443,7 +443,9 @@ void Guardian::InitStats(uint32 duration)
             m_charmInfo->InitCharmCreateSpells();
     }
 
-    SetReactState(REACT_AGGRESSIVE);
+    // Custom: Bloodworms stay defensive. InitStatsForLevel sets that, but this overwrote it, so with AggressorAI they
+    // attacked every hostile creature that came into aggro range and pulled extra mobs.
+    SetReactState(GetEntry() == NPC_BLOODWORM ? REACT_DEFENSIVE : REACT_AGGRESSIVE);
 }
 
 void Guardian::InitSummon()
