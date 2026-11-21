@@ -40,6 +40,8 @@ enum ExilesReachData
     QUEST_MURLOC_MANIA_H                = 59929,
     QUEST_FINDING_THE_LOST_EXPEDITION_A = 54952,
     QUEST_FINDING_THE_LOST_EXPEDITION_H = 59931,
+    CREDIT_LOST_EXPEDITION_H            = 166854,   // "Travel north to find any expedition survivors"
+    AREA_ABANDONED_CAMP                 = 10452,
     QUEST_COOKING_MEAT_A                = 55174,
     QUEST_COOKING_MEAT_H                = 59932,
     QUEST_ENHANCED_COMBAT_TACTICS_A     = 59254,
@@ -219,7 +221,20 @@ class ExilesReachQuestScript : public PlayerScript
 {
 public:
     ExilesReachQuestScript() : PlayerScript("ExilesReachQuestScript",
-        { PLAYERHOOK_ON_PLAYER_QUEST_ACCEPT, PLAYERHOOK_ON_PLAYER_COMPLETE_QUEST }) { }
+        { PLAYERHOOK_ON_PLAYER_QUEST_ACCEPT, PLAYERHOOK_ON_PLAYER_COMPLETE_QUEST, PLAYERHOOK_ON_UPDATE_AREA }) { }
+
+    // Finding the Lost Expedition: reaching the Abandoned Camp finds it (retail: an area trigger pinging the leader).
+    // The Alliance quest is an exploration, the Horde one a credit
+    void OnPlayerUpdateArea(Player* player, uint32 /*oldArea*/, uint32 newArea) override
+    {
+        if (newArea != AREA_ABANDONED_CAMP)
+            return;
+        uint32 quest = IsAlliance(player) ? QUEST_FINDING_THE_LOST_EXPEDITION_A : QUEST_FINDING_THE_LOST_EXPEDITION_H;
+        if (player->GetQuestStatus(quest) != QUEST_STATUS_INCOMPLETE)
+            return;
+        player->KilledMonsterCredit(CREDIT_LOST_EXPEDITION_H);
+        player->AreaExploredOrEventHappens(quest);
+    }
 
     void OnPlayerQuestAccept(Player* player, Quest const* quest) override
     {
@@ -489,9 +504,9 @@ static uint32 SurvivorLine(uint32 entry)
     }
 }
 
-// Emergency First Aid's survivors: retail bandages them with the quest's spell; here talking to one bandages them.
-// They get up, thank the player and salute, then lie down again for the next player (retail swaps in a personal
-// standing copy that walks off)
+// Emergency First Aid's survivors: retail bandages them with the quest's spell; here using one (spellclick flag, no
+// spell) bandages them. They get up, thank the player and salute, then lie down again for the next player (retail
+// swaps in a personal standing copy that walks off)
 struct npc_er_beach_survivor : public ScriptedAI
 {
     npc_er_beach_survivor(Creature* creature) : ScriptedAI(creature) { }
@@ -502,10 +517,10 @@ struct npc_er_beach_survivor : public ScriptedAI
         ScriptedAI::InitializeAI();
     }
 
-    void sGossipHello(Player* player) override
+    void OnSpellClick(Unit* clicker, bool& /*result*/) override
     {
-        CloseGossipMenuFor(player);
-        if (_up)
+        Player* player = clicker->ToPlayer();
+        if (!player || _up)
             return;
         _up = true;
         player->KilledMonsterCredit(me->GetEntry());
