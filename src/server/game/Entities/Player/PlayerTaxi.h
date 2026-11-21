@@ -36,6 +36,9 @@ public:
     {
         uint8  field   = uint8((nodeidx - 1) / 32);
         uint32 submask = 1 << ((nodeidx - 1) % 32);
+        // Custom: nodes past the mask are never known (stock read past its end)
+        if (!nodeidx || field >= TaxiMaskSize)
+            return false;
         return (m_taximask[field] & submask) == submask;
     }
 
@@ -43,6 +46,9 @@ public:
     {
         uint8  field   = uint8((nodeidx - 1) / 32);
         uint32 submask = 1 << ((nodeidx - 1) % 32);
+        // Custom: see IsTaximaskNodeKnown
+        if (!nodeidx || field >= TaxiMaskSize)
+            return false;
         if ((m_taximask[field] & submask) != submask)
         {
             m_taximask[field] |= submask;

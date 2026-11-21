@@ -116,14 +116,19 @@ bool PlayerTaxi::LoadTaxiMask(std::string_view data)
 
 void PlayerTaxi::AppendTaximaskTo(ByteBuffer& data, bool all)
 {
+    // Custom: the client reads one 64-bit word per 64 node ids of its TaxiNodes.dbc, (max id / 64) + 1 of them
+    // (14 uint32 for stock's, whose ids end at 440), so send that many rather than all of TaxiMaskSize
+    uint32 maxNode = sTaxiNodesStore.GetNumRows() ? sTaxiNodesStore.GetNumRows() - 1 : 0;
+    uint32 count = std::min<uint32>(((maxNode >> 6) + 1) * 2, TaxiMaskSize);
+
     if (all)
     {
-        for (uint8 i = 0; i < TaxiMaskSize; i++)
+        for (uint32 i = 0; i < count; i++)
             data << uint32(sTaxiNodesMask[i]);              // all existed nodes
     }
     else
     {
-        for (uint8 i = 0; i < TaxiMaskSize; i++)
+        for (uint32 i = 0; i < count; i++)
             data << uint32(m_taximask[i]);                  // known nodes
     }
 }

@@ -2283,7 +2283,10 @@ typedef std::map<uint32, TaxiPathSetForSource> TaxiPathSetBySource;
 typedef std::vector<TaxiPathNodeEntry const*> TaxiPathNodeList;
 typedef std::vector<TaxiPathNodeList> TaxiPathNodesByPath;
 
-static constexpr std::size_t TaxiMaskSize = 14;
+// Custom: room for 2048 taxi nodes (stock: 14 words, nodes 1-448). Open Azeroth and WHE's Cataclysm flight paths
+// (F-139) add nodes up to 683; the packets carry only as many words as the client's TaxiNodes.dbc needs
+// (PlayerTaxi::AppendTaximaskTo).
+static constexpr std::size_t TaxiMaskSize = 64;
 typedef std::array<uint32, TaxiMaskSize> TaxiMask;
 
 #endif

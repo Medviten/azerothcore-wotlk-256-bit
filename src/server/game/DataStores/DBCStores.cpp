@@ -622,6 +622,12 @@ void LoadDBCStores(std::string const& dataPath)
 
             // valid taxi network node
             uint8  field   = (uint8)((i - 1) / 32);
+            // Custom: nodes past the mask stay out of the network (stock wrote past the end of the masks)
+            if (field >= TaxiMaskSize)
+            {
+                LOG_ERROR("server.loading", "TaxiNodes.dbc: node {} is beyond the {} nodes taxi masks hold, skipped", i, TaxiMaskSize * 32);
+                continue;
+            }
             uint32 submask = 1 << ((i - 1) % 32);
             sTaxiNodesMask[field] |= submask;
 
