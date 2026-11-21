@@ -503,6 +503,7 @@ public:
     void SendZoneText(uint32 zoneId, char const* text, WorldSession const* self = nullptr, TeamId teamId = TEAM_NEUTRAL) const;
 
     void SendInitTransports(Player* player);
+    void SendTransportsRevealedBy(Player* player, uint32 questId); // Custom: `transport_visibility`
     void SendRemoveTransports(Player* player);
     void SendZoneDynamicInfo(uint32 zoneId, Player* player) const;
     void SendZoneWeather(uint32 zoneId, Player* player) const;

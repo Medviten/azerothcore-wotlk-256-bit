@@ -923,6 +923,10 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
 
     if (PhaseMgr* pm = GetPhaseMgr()) // F-194 quest rewarded -> maybe re-phase the zone (world progresses)
         pm->NotifyConditionChanged();
+
+    // Custom: transports this quest reveals (`transport_visibility`) appear now, not at the next map change
+    if (IsInWorld())
+        GetMap()->SendTransportsRevealedBy(this, quest_id);
 }
 
 void Player::SetRewardedQuest(uint32 quest_id)

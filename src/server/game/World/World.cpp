@@ -995,6 +995,9 @@ void World::SetInitialWorldSettings()
     LOG_INFO("server.loading", "Starting Battlefield System");
     sBattlefieldMgr->InitBattlefield();
 
+    LOG_INFO("server.loading", "Loading Transport Visibility..."); // Custom: `transport_visibility`
+    sTransportMgr->LoadTransportVisibility();
+
     LOG_INFO("server.loading", "Loading Transports...");
     sTransportMgr->SpawnContinentTransports();
 

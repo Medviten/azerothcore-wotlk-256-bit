@@ -208,9 +208,18 @@ void MotionTransport::BuildUpdate(UpdateDataMapType& data_map)
         return;
 
     for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
-        BuildFieldsUpdate(itr->GetSource(), data_map);
+        if (!IsHiddenFor(itr->GetSource())) // Custom: no updates for a transport the player was never sent
+            BuildFieldsUpdate(itr->GetSource(), data_map);
 
     ClearUpdateMask(true);
+}
+
+// Custom: a transport with a `transport_visibility` quest is shown only to players who have that quest rewarded
+// (and to its passengers, so nobody loses the deck under them)
+bool MotionTransport::IsHiddenFor(Player const* player) const
+{
+    uint32 quest = _transportInfo ? _transportInfo->visibilityQuest : 0;
+    return quest && player->GetTransport() != this && !player->GetQuestRewardStatus(quest);
 }
 
 void MotionTransport::Update(uint32 diff)

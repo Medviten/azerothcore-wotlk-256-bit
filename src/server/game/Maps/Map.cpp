@@ -384,7 +384,8 @@ bool Map::AddToMap(Transport* obj, bool /*checkTransport*/)
     // They get the correct transport list from SendInitTransports when added to their new map
     for (Map::PlayerList::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
     {
-        if (itr->GetSource()->IsInWorld() && itr->GetSource()->GetTransport() != obj)
+        if (itr->GetSource()->IsInWorld() && itr->GetSource()->GetTransport() != obj
+            && !obj->IsHiddenFor(itr->GetSource())) // Custom: `transport_visibility`
         {
             UpdateData data;
             obj->BuildCreateUpdateBlockForPlayer(&data, itr->GetSource());
@@ -1744,8 +1745,27 @@ void Map::SendInitTransports(Player* player)
     // Hack to send out transports
     UpdateData transData;
     for (TransportsContainer::const_iterator itr = _transports.begin(); itr != _transports.end(); ++itr)
-        if (*itr != player->GetTransport() && (!sToCloud9Sidecar->ClusterModeEnabled() || player->InSamePhase(*itr)))
+        if (*itr != player->GetTransport() && (!sToCloud9Sidecar->ClusterModeEnabled() || player->InSamePhase(*itr))
+            && !(*itr)->IsHiddenFor(player)) // Custom: `transport_visibility`
             (*itr)->BuildCreateUpdateBlockForPlayer(&transData, player);
+
+    if (!transData.HasData())
+        return;
+
+    WorldPacket packet;
+    transData.BuildPacket(packet);
+    player->SendDirectMessage(&packet);
+}
+
+// Custom: sends the transports on this map that rewarding questId reveals (`transport_visibility`)
+void Map::SendTransportsRevealedBy(Player* player, uint32 questId)
+{
+    UpdateData transData;
+    for (Transport* transport : _transports)
+        if (MotionTransport* motion = transport->ToMotionTransport())
+            if (motion->GetTransportTemplate() && motion->GetTransportTemplate()->visibilityQuest == questId
+                && motion != player->GetTransport())
+                motion->BuildCreateUpdateBlockForPlayer(&transData, player);
 
     if (!transData.HasData())
         return;

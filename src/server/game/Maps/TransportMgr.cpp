@@ -98,6 +98,28 @@ void TransportMgr::LoadTransportTemplates()
     LOG_INFO("server.loading", " ");
 }
 
+// Custom: transports only players who have rewarded a quest see (a regular service that opens after a scripted first
+// trip, for instance). Transports skip grid visibility, so this is checked where they are sent. After the quests load.
+void TransportMgr::LoadTransportVisibility()
+{
+    if (QueryResult visibility = WorldDatabase.Query("SELECT entry, quest FROM transport_visibility"))
+    {
+        do
+        {
+            Field* fields = visibility->Fetch();
+            uint32 entry = fields[0].Get<uint32>();
+            uint32 quest = fields[1].Get<uint32>();
+            auto itr = _transportTemplates.find(entry);
+            if (itr == _transportTemplates.end())
+                LOG_ERROR("sql.sql", "Table `transport_visibility` has entry {}, which is no transport, skipped.", entry);
+            else if (!sObjectMgr->GetQuestTemplate(quest))
+                LOG_ERROR("sql.sql", "Table `transport_visibility` has transport {} with missing quest {}, skipped.", entry, quest);
+            else
+                itr->second.visibilityQuest = quest;
+        } while (visibility->NextRow());
+    }
+}
+
 class SplineRawInitializer
 {
 public:

@@ -40,6 +40,9 @@ public:
 
     virtual void DelayedUpdate(uint32 /*diff*/) {}
 
+    // Custom: whether the player is not to see this transport (`transport_visibility`)
+    [[nodiscard]] virtual bool IsHiddenFor(Player const* /*player*/) const { return false; }
+
     uint32 GetPathProgress() const { return GetGOValue()->Transport.PathProgress; }
     void SetPathProgress(uint32 val) { m_goValue.Transport.PathProgress = val; }
 
@@ -57,6 +60,7 @@ public:
     bool CreateMoTrans(ObjectGuid::LowType guidlow, uint32 entry, uint32 mapid, float x, float y, float z, float ang, uint32 animprogress);
     void CleanupsBeforeDelete(bool finalCleanup = true) override;
     void BuildUpdate(UpdateDataMapType& data_map) override;
+    [[nodiscard]] bool IsHiddenFor(Player const* player) const override; // Custom: `transport_visibility`
 
     void Update(uint32 diff) override;
     void DelayedUpdate(uint32 diff) override;

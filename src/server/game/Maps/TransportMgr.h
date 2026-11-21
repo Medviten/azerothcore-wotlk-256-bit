@@ -79,6 +79,7 @@ struct TransportTemplate
     float accelTime;
     float accelDist;
     uint32 entry;
+    uint32 visibilityQuest = 0; // Custom: shown only to players who have this quest rewarded (`transport_visibility`)
 };
 
 typedef std::map<uint32, TransportAnimationEntry const*> TransportPathContainer;
@@ -108,6 +109,7 @@ public:
     void Unload();
 
     void LoadTransportTemplates();
+    void LoadTransportVisibility(); // Custom: `transport_visibility`, after the quests
 
     // Creates a transport using given GameObject template entry
     MotionTransport* CreateTransport(uint32 entry, ObjectGuid::LowType guid = 0, Map* map = nullptr);
