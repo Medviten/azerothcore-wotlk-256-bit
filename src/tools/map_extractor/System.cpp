@@ -89,7 +89,8 @@ enum Extract
 // Select data for extract
 int   CONF_extract = EXTRACT_MAP | EXTRACT_DBC | EXTRACT_CAMERA;
 // This option allow limit minimum height to some value (Allow save some memory)
-bool  CONF_allow_height_limit = true;
+// Custom: off, so sea floors below -500 (Vashj'ir's Abyssal Depths reach -1940) keep their real height
+bool  CONF_allow_height_limit = false;
 float CONF_use_minHeight = -500.0f;
 
 // This option allow use float to int conversion
