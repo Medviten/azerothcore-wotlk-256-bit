@@ -6079,11 +6079,11 @@ void Player::CheckAreaExploreAndOutdoor()
     }
 
     uint32 val = (uint32)(1 << (areaEntry->exploreFlag % 32));
-    uint32 currFields = GetUInt32Value(PLAYER_EXPLORED_ZONES_1 + offset);
+    uint32 currFields = GetUInt32Value(PlayerExploredZonesField(offset)); // Custom: PlayerExploredZonesField
 
     if (!(currFields & val))
     {
-        SetUInt32Value(PLAYER_EXPLORED_ZONES_1 + offset, (uint32)(currFields | val));
+        SetUInt32Value(PlayerExploredZonesField(offset), (uint32)(currFields | val));
 
         UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_EXPLORE_AREA, areaId);
 
@@ -15393,7 +15393,7 @@ void Player::_SaveCharacter(bool create, CharacterDatabaseTransaction trans)
 
         ss.str("");
         for (uint32 i = 0; i < PLAYER_EXPLORED_ZONES_SIZE; ++i)
-            ss << GetUInt32Value(PLAYER_EXPLORED_ZONES_1 + i) << ' ';
+            ss << GetUInt32Value(PlayerExploredZonesField(i)) << ' '; // Custom: PlayerExploredZonesField
         stmt->SetData(index++, ss.str());
 
         ss.str("");
@@ -15533,7 +15533,7 @@ void Player::_SaveCharacter(bool create, CharacterDatabaseTransaction trans)
 
         ss.str("");
         for (uint32 i = 0; i < PLAYER_EXPLORED_ZONES_SIZE; ++i)
-            ss << GetUInt32Value(PLAYER_EXPLORED_ZONES_1 + i) << ' ';
+            ss << GetUInt32Value(PlayerExploredZonesField(i)) << ' '; // Custom: PlayerExploredZonesField
         stmt->SetData(index++, ss.str());
 
         ss.str("");

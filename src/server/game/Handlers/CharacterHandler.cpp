@@ -1097,9 +1097,9 @@ void WorldSession::HandlePlayerLoginFromDB(LoginQueryHolder const& holder)
         // start with every map explored
         if (sWorld->getBoolConfig(CONFIG_START_ALL_EXPLORED))
         {
-            for (uint8 i = 0; i < PLAYER_EXPLORED_ZONES_SIZE; i++)
+            for (uint32 i = 0; i < PLAYER_EXPLORED_ZONES_SIZE; i++) // Custom: uint32 (512 words), PlayerExploredZonesField
             {
-                pCurrChar->SetFlag(PLAYER_EXPLORED_ZONES_1 + i, 0xFFFFFFFF);
+                pCurrChar->SetFlag(PlayerExploredZonesField(i), 0xFFFFFFFF);
             }
         }
 

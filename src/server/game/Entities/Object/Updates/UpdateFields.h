@@ -393,8 +393,10 @@ enum EUnitFields
     // moves. Private; the client takes them from the matching wowdecomp-256-bit build.
     PLAYER_QUEST_LOG_EXT_1_1                  = UNIT_END + 0x049A, // Size: 1150, Type: INT, Flags: PRIVATE
     PLAYER_QUEST_LOG_SIZE                     = UNIT_END + 0x0918, // Size: 1, Type: INT, Flags: PRIVATE (Custom: Quests.LogSize, for the client's GetQuestLogCapacity())
-    PLAYER_FIELD_EXT_PADDING                  = UNIT_END + 0x0919, // Size: 1, Type: INT, Flags: PRIVATE (Custom: always 0, keeps the client's player data a multiple of 8 bytes)
-    PLAYER_END                                = UNIT_END + 0x091A, // Custom: was UNIT_END + 0x049A
+    // Custom: explored-zone words 128-511 (area bits 4096-16383), after PLAYER_EXPLORED_ZONES_1's stock 128 words
+    PLAYER_EXPLORED_ZONES_EXT_1               = UNIT_END + 0x0919, // Size: 384, Type: BYTES, Flags: PRIVATE
+    PLAYER_FIELD_EXT_PADDING                  = UNIT_END + 0x0A99, // Size: 1, Type: INT, Flags: PRIVATE (Custom: always 0, keeps the client's player data a multiple of 8 bytes)
+    PLAYER_END                                = UNIT_END + 0x0A9A, // Custom: was UNIT_END + 0x049A
 };
 
 enum EGameObjectFields

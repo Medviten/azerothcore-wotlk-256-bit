@@ -71,7 +71,16 @@ typedef void(*bgZoneRef)(Battleground*, WorldPackets::WorldState::InitWorldState
 
 #define PLAYER_MAX_SKILLS           127
 #define PLAYER_MAX_DAILY_QUESTS     25
-#define PLAYER_EXPLORED_ZONES_SIZE  128
+// Custom: 512 explored-zone words (16384 area bits) instead of 128: words 0-127 are PLAYER_EXPLORED_ZONES_1, words
+// 128-511 the appended PLAYER_EXPLORED_ZONES_EXT_1 (needs the wowdecomp-256-bit client). Index them with
+// PlayerExploredZonesField().
+#define PLAYER_EXPLORED_ZONES_STOCK_SIZE  128
+#define PLAYER_EXPLORED_ZONES_SIZE  512
+
+inline uint16 PlayerExploredZonesField(uint32 word)
+{
+    return word < PLAYER_EXPLORED_ZONES_STOCK_SIZE ? PLAYER_EXPLORED_ZONES_1 + word : PLAYER_EXPLORED_ZONES_EXT_1 + word - PLAYER_EXPLORED_ZONES_STOCK_SIZE;
+}
 
 // corpse reclaim times
 #define DEATH_EXPIRE_STEP (5*MINUTE)

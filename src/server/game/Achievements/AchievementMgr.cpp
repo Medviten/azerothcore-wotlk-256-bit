@@ -1394,7 +1394,7 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                             continue;
 
                         uint32 mask = 1 << (uint32(area->exploreFlag) % 32);
-                        if (GetPlayer()->GetUInt32Value(PLAYER_EXPLORED_ZONES_1 + playerIndexOffset) & mask)
+                        if (GetPlayer()->GetUInt32Value(PlayerExploredZonesField(playerIndexOffset)) & mask) // Custom: PlayerExploredZonesField
                         {
                             matchFound = true;
                             break;

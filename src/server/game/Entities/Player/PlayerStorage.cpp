@@ -5100,9 +5100,20 @@ bool Player::LoadFromDB(ObjectGuid playerGuid, CharacterDatabaseQueryHolder cons
     SetUInt32Value(UNIT_FIELD_LEVEL, fields[6].Get<uint8>());
     SetUInt32Value(PLAYER_XP, fields[7].Get<uint32>());
 
-    if (!_LoadIntoDataField(fields[66].Get<std::string>(), PLAYER_EXPLORED_ZONES_1, PLAYER_EXPLORED_ZONES_SIZE))
+    // Custom: exploredZones holds PLAYER_EXPLORED_ZONES_SIZE words; a character saved before the extension has the stock
+    // 128, and its other words stay 0 (_LoadIntoDataField would reject the shorter list)
+    std::vector<std::string_view> exploredZones = Acore::Tokenize(fields[66].Get<std::string_view>(), ' ', false);
+    if (exploredZones.size() != PLAYER_EXPLORED_ZONES_STOCK_SIZE && exploredZones.size() != PLAYER_EXPLORED_ZONES_SIZE)
     {
         LOG_WARN("entities.player.loading", "Player::LoadFromDB: Player ({}) has invalid exploredzones data ({}). Forcing partial load.", guid, fields[66].Get<std::string_view>());
+    }
+
+    for (uint32 i = 0; i < exploredZones.size() && i < PLAYER_EXPLORED_ZONES_SIZE; ++i)
+    {
+        if (Optional<uint32> val = Acore::StringTo<uint32>(exploredZones[i]))
+        {
+            SetUInt32Value(PlayerExploredZonesField(i), *val);
+        }
     }
 
     if (!_LoadIntoDataField(fields[69].Get<std::string>(), PLAYER__FIELD_KNOWN_TITLES, KNOWN_TITLES_SIZE * 2))

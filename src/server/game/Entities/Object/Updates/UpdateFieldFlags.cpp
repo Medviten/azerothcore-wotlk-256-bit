@@ -1487,10 +1487,10 @@ uint32 UnitUpdateFieldFlags[PLAYER_END] =
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_GLYPHS_1+5
     UF_FLAG_PRIVATE,                                        // PLAYER_GLYPHS_ENABLED
     UF_FLAG_PRIVATE,                                        // PLAYER_PET_SPELL_POWER
-    // PLAYER_QUEST_LOG_EXT_1_1 .. PLAYER_QUEST_LOG_SIZE: filled in below
+    // PLAYER_QUEST_LOG_EXT_1_1 .. PLAYER_FIELD_EXT_PADDING: filled in below
 };
 
-// Custom: the extended quest log fields and PLAYER_QUEST_LOG_SIZE are all private
+// Custom: the appended fields (extended quest log, PLAYER_QUEST_LOG_SIZE, extended explored zones) are all private
 static struct QuestLogExtFieldFlags
 {
     QuestLogExtFieldFlags()

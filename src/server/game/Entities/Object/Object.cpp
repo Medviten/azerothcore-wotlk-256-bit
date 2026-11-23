@@ -499,7 +499,7 @@ void Object::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* targe
 
     ByteBuffer fieldBuffer;
     UpdateMask updateMask;
-    // Custom: the extended quest log fields are private, so other players get the stock-length mask
+    // Custom: the appended fields (extended quest log, explored zones) are private, so other players get the stock-length mask
     uint16 valuesCount = m_valuesCount == PLAYER_END && target != this ? uint16(PLAYER_QUEST_LOG_EXT_1_1) : m_valuesCount;
     updateMask.SetCount(valuesCount);
 
