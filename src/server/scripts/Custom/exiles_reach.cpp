@@ -504,8 +504,8 @@ static uint32 SurvivorLine(uint32 entry)
     }
 }
 
-// Emergency First Aid's survivors: retail bandages them with the quest's spell; here using one (spellclick flag, no
-// spell) bandages them. They get up, thank the player and salute, then lie down again for the next player (retail
+// Emergency First Aid's survivors: retail bandages them with the quest's spell; here talking to one (gossip flag)
+// bandages them. They get up, thank the player and salute, then lie down again for the next player (retail
 // swaps in a personal standing copy that walks off)
 struct npc_er_beach_survivor : public ScriptedAI
 {
@@ -517,9 +517,21 @@ struct npc_er_beach_survivor : public ScriptedAI
         ScriptedAI::InitializeAI();
     }
 
+    // Talking to them bandages them too: the gossip npcflag reliably reaches the client, which the spellclick one did
+    // not (the Horde survivors could never be clicked)
+    void sGossipHello(Player* player) override
+    {
+        CloseGossipMenuFor(player);
+        Bandage(player);
+    }
+
     void OnSpellClick(Unit* clicker, bool& /*result*/) override
     {
-        Player* player = clicker->ToPlayer();
+        Bandage(clicker->ToPlayer());
+    }
+
+    void Bandage(Player* player)
+    {
         if (!player || _up)
             return;
         _up = true;
