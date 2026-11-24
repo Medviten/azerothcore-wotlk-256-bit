@@ -1838,6 +1838,13 @@ bool WorldObject::CanSeeOrDetect(WorldObject const* obj, bool ignoreStealth, boo
         }
     }
 
+    // Custom: visibility conditions work both ways, so a creature hidden from a player (another phase's copy, F-137's
+    // condition phasing) can't see, aggro or attack them either; before, invisible hostiles killed players.
+    if (Creature const* self = ToCreature())
+        if (Player const* player = obj->ToPlayer())
+            if (!player->CanSeeObjectByVisibilityConditions(self))
+                return false;
+
     // Gameobject scripts
     if (GameObject const* goObj = obj->ToGameObject())
     {
