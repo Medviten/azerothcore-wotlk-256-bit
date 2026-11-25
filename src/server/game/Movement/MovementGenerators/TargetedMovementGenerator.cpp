@@ -186,12 +186,25 @@ bool ChaseMovementGenerator<T>::DispatchSplineToPosition(T* owner, float x, floa
 
     _fallbackPositioning = usedFallback;
 
+    // Custom: an incomplete path counts as usable for creatures, and they used to clear cannot-reach as soon as they
+    // had one, so a target standing off the mesh (on a post above water, say) kept them in combat at the path's end
+    // forever. If the path stops out of reach of the target, keep the evade timer running while the creature walks it.
+    _pathStopsShort = false;
+    if (target && (i_path->GetPathType() & PATHFIND_INCOMPLETE))
+    {
+        G3D::Vector3 const& end = i_path->GetActualEndPosition();
+        _pathStopsShort = GetTarget()->GetExactDist(end.x, end.y, end.z) > std::max(maxTarget, owner->GetMeleeRange(GetTarget()));
+    }
+
     if (cutPath)
         i_path->ShortenPathUntilDist(targetPos, maxTarget);
 
     if (cOwner)
     {
-        cOwner->SetCannotReachTarget();
+        if (_pathStopsShort)
+            cOwner->SetCannotReachTarget(GetTarget()->GetGUID());
+        else
+            cOwner->SetCannotReachTarget();
     }
 
     owner->AddUnitState(UNIT_STATE_CHASE_MOVE);
@@ -305,7 +318,8 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
         owner->ClearUnitState(UNIT_STATE_CHASE_MOVE);
         owner->SetInFront(target);
 
-        if (cOwner)
+        // Custom: arriving at the end of a path that stops short isn't reaching the target, keep the evade timer.
+        if (cOwner && !_pathStopsShort)
             cOwner->SetCannotReachTarget();
 
         MovementInform(owner);

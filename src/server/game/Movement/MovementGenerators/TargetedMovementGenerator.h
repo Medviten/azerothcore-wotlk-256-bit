@@ -74,6 +74,8 @@ private:
     bool _movingTowards = true;
     bool _mutualChase = true;
     bool _fallbackPositioning = false;
+    // Custom: the current chase path is incomplete and ends out of reach of the target (see DispatchSplineToPosition).
+    bool _pathStopsShort = false;
 
     ChaseMovementMode m_currentMode;
 };
