@@ -639,7 +639,8 @@ struct npc_er_follower : public ScriptedAI
         {
             if (ErFollowerInfo const* info = Info())
                 me->SetFacingTo(info->Goal.GetOrientation());
-            me->DespawnOrUnsummon(10s);
+            // Custom: 10s left it standing inside the spawned leader the player now sees at the same spot
+            me->DespawnOrUnsummon(2s);
         }
     }
 
