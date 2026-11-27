@@ -740,10 +740,12 @@ enum Language
     LANG_ZOMBIE         = 36,
     LANG_GNOMISH_BINARY = 37,
     LANG_GOBLIN_BINARY  = 38,
+    LANG_GILNEAN        = 39,                               // Custom: Cataclysm's Gilnean and Goblin (WHE F-151)
+    LANG_GOBLIN         = 40,
     LANG_ADDON          = 0xFFFFFFFF                        // used by addons, in 2.4.0 not exist, replaced by messagetype?
 };
 
-#define LANGUAGES_COUNT   19
+#define LANGUAGES_COUNT   21                                // Custom: 19 + Gilnean and Goblin
 
 enum TeamId : uint8
 {
@@ -3249,7 +3251,11 @@ enum SkillType
     SKILL_PET_WASP                 = 785,
     SKILL_PET_EXOTIC_RHINO         = 786,
     SKILL_PET_EXOTIC_CORE_HOUND    = 787,
-    SKILL_PET_EXOTIC_SPIRIT_BEAST  = 788
+    SKILL_PET_EXOTIC_SPIRIT_BEAST  = 788,
+    // Custom: Cataclysm's (and retail's) language skills (WHE F-151). MAX_SKILL_TYPE stays 789: it only bounds an
+    // item's RequiredSkill, and no item asks for a language
+    SKILL_LANG_GILNEAN             = 791,
+    SKILL_LANG_GOBLIN              = 792
 };
 
 #define MAX_SKILL_TYPE               789
